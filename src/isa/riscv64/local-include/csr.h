@@ -414,6 +414,9 @@
   #define CSRS_M_AIA(f)
 #endif // CONFIG_RV_IMSIC
 
+#define CSRS_M_CVM(f) \
+ f(mcvm       , 0xBC0)
+
 /** ALL **/
 #define CSRS_M(f) \
   CSRS_M_INFOMATION(f) \
@@ -427,7 +430,8 @@
   CSRS_M_COUNTER_SETUP(f) \
   CSRS_M_DEBUG_TRACE(f) \
   CSRS_M_AIA(f) \
-  CSRS_DEBUG_MODE(f)
+  CSRS_DEBUG_MODE(f) \
+  CSRS_M_CVM(f)
 
 
 /* ALL CSRs */
@@ -885,6 +889,14 @@ CSR_STRUCT_START(satp)
   uint64_t asid:16;
   uint64_t mode: 4;
 CSR_STRUCT_END(satp)
+
+CSR_STRUCT_START(mcvm)
+  uint64_t BMA  :  62;
+  uint64_t CMODE:   1;
+  uint64_t BME  :   1;
+CSR_STRUCT_END(mcvm)
+
+
 
 #ifdef CONFIG_RV_SSCOFPMF
 CSR_STRUCT_START(scountovf)

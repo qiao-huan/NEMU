@@ -202,6 +202,14 @@ bool check_paddr(paddr_t addr, int len, int type, int mode, vaddr_t vaddr) {
       raise_read_access_fault(type, vaddr);
     }
     return false;
+  } if (!isa_cvm_check_permission(addr, len, type, mode)){
+    if (type == MEM_TYPE_WRITE) {
+      raise_access_fault(EX_SAF, vaddr);
+    }else {
+      Log("isa pmp check failed when checking bitmap by CVM");
+      raise_read_access_fault(type, vaddr);
+    }
+    return false;
   } else {
     return true;
   }
@@ -241,6 +249,13 @@ word_t paddr_read(paddr_t addr, int len, int type, int mode, vaddr_t vaddr) {
   }
   return 0;
 #endif // CONFIG_SHARE
+}
+
+
+word_t bitmap_read(paddr_t addr, int type, int mode) {
+  // assert(type == MEM_TYPE_BM_READ);
+  // assert (likely(in_pmem(addr)));
+  return pmem_read(addr, 1);
 }
 
 #ifdef CONFIG_STORE_LOG

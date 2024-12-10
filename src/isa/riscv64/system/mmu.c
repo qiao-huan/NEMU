@@ -24,29 +24,36 @@
 
 typedef union PageTableEntry {
   struct {
-    uint32_t v   : 1;
-    uint32_t r   : 1;
-    uint32_t w   : 1;
-    uint32_t x   : 1;
-    uint32_t u   : 1;
-    uint32_t g   : 1;
-    uint32_t a   : 1;
-    uint32_t d   : 1;
-    uint32_t rsw : 2;
-    uint64_t ppn :44;
-    uint32_t pad :10;
+    uint32_t v   : 1; //V 位决定了该页表项的其余部分是否有效（V = 1 时有效）。若 V = 0，则任何遍历到此页表项的虚址转换操作都会导致页错误。
+    uint32_t r   : 1; //r 位表示此页是否可以read。  如果这三个位都是 0， 那么这个页表项是指向下一级页表的指针，否则它是页表树的一个叶节点。
+    uint32_t w   : 1; //w 位表示此页是否可以write。 如果这三个位都是 0， 那么这个页表项是指向下一级页表的指针，否则它是页表树的一个叶节点。
+    uint32_t x   : 1; //x 位表示此页是否可以excute。如果这三个位都是 0， 那么这个页表项是指向下一级页表的指针，否则它是页表树的一个叶节点。
+    uint32_t u   : 1; //U 位表示该页是否是用户页面。若 U = 0，则 U 模式不能访问此页面，但 S 模式可以。若 U = 1，则 U 模式下能访问这个页面，而 S 模式不能。
+    uint32_t g   : 1; //G 位表示这个映射是否对所有虚址空间有效，硬件可以用这个信息来提高地址转换的性能。这一位通常只用于属于操作系统的页面。
+    uint32_t a   : 1; //A 位表示自从上次 A 位被清除以来，该页面是否被访问过。（似乎在与辅存交换的操作时有用）
+    uint32_t d   : 1; //D 位表示自从上次清除 D 位以来页面是否被弄脏（例如被写入）。（似乎在与辅存交换的操作时有用），如果 pte.d 位未设置而且当前是写操作，这是非法的
+    uint32_t rsw : 2; //RSW 域留给操作系统使用，它会被硬件忽略。
+    uint64_t ppn :44; //PPN 域包含物理页号，这是物理地址的一部分。若这个页表项是一个叶节点，那么 PPN 是转换后物理地址的一部分。否则 PPN 给出下一级页表的地址。
+    uint32_t pad :10; //填充
   };
   uint64_t val;
 } PTE;
 
 #define PGSHFT 12
+#define BMSHFT 32
 #define PGMASK ((1ull << PGSHFT) - 1)
 #define PGBASE(pn) (pn << PGSHFT)
+#define BMBASE(bma) (bma << BMSHFT)
+#define GET_BIT(bm_base, ppn) (((bm_base[(ppn) / 8] >> ((ppn) % 8)) & 1))
+
 
 // Sv39 & Sv48 page walk
 #define PTE_SIZE 8
 #define VPNMASK 0x1ff
 #define GPVPNMASK 0x7ff
+/**
+ * 计算虚拟地址中第 i 级虚拟页号（VPN[i]）的起始位偏移。
+*/
 static inline uintptr_t VPNiSHFT(int i) {
   return (PGSHFT) + 9 * i;
 }
@@ -61,6 +68,12 @@ static inline uintptr_t GVPNi(vaddr_t va, int i) {
   bool hld_st = 0;
 #endif
 #ifdef CONFIG_RVH
+/**
+ * 依次考虑以下几种场景下的合法性：
+ * 1. ifetch时
+ * 2. 读内存时
+ * 3. 写内存时
+*/
 static inline bool check_permission(PTE *pte, bool ok, vaddr_t vaddr, int type, int virt, int mode) {
 bool ifetch = (type == MEM_TYPE_IFETCH);
 #else
@@ -68,6 +81,16 @@ static inline bool check_permission(PTE *pte, bool ok, vaddr_t vaddr, int type) 
   bool ifetch = (type == MEM_TYPE_IFETCH);
   uint32_t mode = (mstatus->mprv && !ifetch ? mstatus->mpp : cpu.mode);
 #endif
+  /**
+   * mprv:Modify Privilege
+   * 功能:控制在机器模式（M-mode）下，是否使用 mstatus->mpp 字段指定的模式权限来访问内存
+   * 如果 mprv = 1，即使处理器当前处于机器模式，内存访问权限会依据 mstatus->mpp 字段的模式来判断（例如u模式或s模式）。这可以用于m模式下模拟其他模式的操作
+   * 如果 mprv = 0，内存访问始终以m模式的权限进行
+   * 
+   * mpp:Machine Previous Privilege
+   * 功能:用于存储处理器在进入机器模式之前的运行模式,在处理器返回较低权限模式时（通过 mret 指令），会根据 mpp 字段的值恢复到之前的运行模式
+   * 
+  */
   assert(mode == MODE_U || mode == MODE_S);
   ok = ok && pte->v;
   ok = ok && !(mode == MODE_U && !pte->u);
@@ -75,12 +98,17 @@ static inline bool check_permission(PTE *pte, bool ok, vaddr_t vaddr, int type) 
   ok = ok && !(pte->u && ((mode == MODE_S) && (!(virt? vsstatus->sum: mstatus->sum) || ifetch)));
   Logtr("ok: %i, mode == U: %i, pte->u: %i, ppn: %lx, virt: %d", ok, mode == MODE_U, pte->u, (uint64_t)pte->ppn << 12, virt);
 #else
+  // 在pte是u模式的项的前提下，当前模式不是s模式也就罢了，如果是s模式，则必须要求sum为1。
+  //sum 控制超级模式是否可以访问用户空间，避免错误地使用超级模式访问用户数据
   ok = ok && !(pte->u && ((mode == MODE_S) && (!mstatus->sum || ifetch)));
   Logtr("ok: %i, mode: %s, pte->u: %i, a: %i d: %i, ppn: %lx ", ok,
         mode == MODE_U ? "U" : MODE_S ? "S" : MODE_M ? "M" : "NOTYPE",
         pte->u, pte->a, pte->d, (uint64_t)pte->ppn << 12);
 #endif
   if (ifetch) {
+     /**
+    * 核心判断准则：指令必须从具有执行权限(pte->x)的页面加载
+    */
     Logtr("Translate for instr reading");
 #ifdef CONFIG_SHARE
 //  update a/d by exception
@@ -91,6 +119,17 @@ static inline bool check_permission(PTE *pte, bool ok, vaddr_t vaddr, int type) 
     bool update_ad = false;
 #endif
     if (!(ok && pte->x && !pte->pad) || update_ad) {
+      /**
+       * 如果是指令地址翻譯，要求：
+       * 页表项必须有效（ok）。
+       * 页表项的执行权限（pte->x）必须为 1。
+       * 页表项的填充值位（pte->pad）必须为 0。
+      */
+     
+      /**
+        * amo:Atomic Memory Operation
+        * 表示处理器当前是否正在执行原子内存操作指令
+      */
       assert(!cpu.amo);
       IFDEF(CONFIG_USE_XS_ARCH_CSRS, vaddr = INTR_TVAL_SV48_SEXT(vaddr));
       INTR_TVAL_REG(EX_IPF) = vaddr;
@@ -98,6 +137,9 @@ static inline bool check_permission(PTE *pte, bool ok, vaddr_t vaddr, int type) 
       return false;
     }
   } else if (type == MEM_TYPE_READ) {
+    /**
+     * 核心准则:所访问页面必须可读，或者在可执行时认为的可读
+    */
     Logtr("Translate for memory reading");
 #ifdef CONFIG_RVH
   bool can_load;
@@ -106,6 +148,11 @@ static inline bool check_permission(PTE *pte, bool ok, vaddr_t vaddr, int type) 
   else
     can_load = pte->r || ((mstatus->mxr || (vsstatus->mxr && virt)) && pte->x);
 #else
+  /**
+   * mxr:Make eXecute Readable
+   * 功能:控制是否允许将具有执行权限（x 位）的页面视为可读（r 位）
+   * 某些应用场景需要执行代码页面的同时，也能读取其中的数据内容（比如动态解释器或 JIT 编译器）
+  */
   bool can_load = pte->r || (mstatus->mxr && pte->x);
 #endif
 #ifdef CONFIG_SHARE
@@ -126,6 +173,9 @@ static inline bool check_permission(PTE *pte, bool ok, vaddr_t vaddr, int type) 
       return false;
     }
   } else { // MEM_TYPE_WRITE
+    /**
+     * 核心准则:确保有写权限（pte->w）和检查脏位（pte->d）
+    */
 #ifdef CONFIG_SHARE
     bool update_ad = !pte->a || !pte->d;
    if (update_ad && ok && pte->w) Logtr("raise exception to update ad for store");
@@ -252,6 +302,9 @@ paddr_t gpa_stage(paddr_t gpaddr, vaddr_t vaddr, int type){
 
 
 #ifndef CONFIG_MULTICORE_DIFF
+/**
+ * 读指定地址的页表项中的内容
+*/
 static word_t pte_read(paddr_t addr, int type, int mode, vaddr_t vaddr) {
 #ifdef CONFIG_SHARE
   extern bool is_in_mmio(paddr_t addr);
@@ -272,9 +325,10 @@ static word_t pte_read(paddr_t addr, int type, int mode, vaddr_t vaddr) {
 
 static paddr_t ptw(vaddr_t vaddr, int type) {
   Logtr("Page walking for 0x%lx\n", vaddr);
-  word_t pg_base = PGBASE(satp->ppn);
+  word_t pg_base = PGBASE(satp->ppn);  //satp->ppn:一级页表基址，pg_base表示根页表的基地址
+  // printf("根页表基址 pg_base = 0x%lx\n", pg_base);
   int max_level;
-  max_level = satp->mode == 8 ? 3 : 4;
+  max_level = satp->mode == 8 ? 3 : 4;  //Sv39使用三级页表转换
 #ifdef CONFIG_RVH
   int virt = cpu.v;
   int mode = cpu.mode;
@@ -291,6 +345,7 @@ static paddr_t ptw(vaddr_t vaddr, int type) {
   if(virt){
     if(vsatp->mode == 0) return gpa_stage(vaddr, vaddr, type) & ~PAGE_MASK;
     pg_base = PGBASE(vsatp->ppn);
+    // printf("virt模式, 根页表基址 pg_base = 0x%lx\n", pg_base);
     max_level = vsatp->mode == 8 ? 3 : 4;
   }
 #endif
@@ -302,6 +357,8 @@ static paddr_t ptw(vaddr_t vaddr, int type) {
     vaddr48 >>= (64 - 48);
     if ((uint64_t)vaddr48 != vaddr) goto bad;
   } else if (max_level == 3) {
+    //检测vaddr是否合法：在 RISC-V 的 Sv39 分页模式下，虚拟地址的有效位只有 39 位
+    //这意味着要求vaddr[63:39] 必须和 vaddr[38]相等
     int64_t vaddr39 = vaddr << (64 - 39);
     vaddr39 >>= (64 - 39);
     if ((uint64_t)vaddr39 != vaddr) goto bad;
@@ -325,8 +382,23 @@ static paddr_t ptw(vaddr_t vaddr, int type) {
     }
 #endif
     pg_base = PGBASE((uint64_t)pte.ppn);
-    if (!pte.v || (!pte.r && pte.w)) goto bad;
-    if (pte.r || pte.x || pte.pad) { break; }
+    // printf("第 %d 级页表基址 pg_base = 0x%lx\n", max_level - level, pg_base);
+    if (!pte.v || (!pte.r && pte.w)) {
+      /**
+       * 有效性检查，以下情况非法：
+       * 1. valie 位为 0
+       * 2. 不允许读但允许写
+      */
+      goto bad;
+    }
+    if (pte.r || pte.x || pte.pad) { 
+      /**
+       * 如果发现叶子节点，结束遍历
+       * 问：为什么这里不需要判断pte.w ?
+       * 答：因为，假设需要判断pte.w,那么只能是在这种情况下需要:那就是pte.r = 0, 且pte.w = 1，而这种情况是非法的，已经在上面判断过了
+      */
+      break; 
+    }
     else {
       level --;
       if (level < 0) { goto bad; }
@@ -345,6 +417,7 @@ static paddr_t ptw(vaddr_t vaddr, int type) {
       goto bad;
     }
     pg_base = (pg_base & ~pg_mask) | (vaddr & pg_mask & ~PGMASK);
+    // printf("计算得到的 pg_base = 0x%lx\n", pg_base);
   }
   #ifdef CONFIG_RVH
   if(virt){
@@ -424,7 +497,7 @@ static paddr_t ptw(vaddr_t vaddr, int type) {
     }
   }
 #endif // CONFIG_SHARE
-
+  // printf("返回的物理地址 = 0x%lx, pg_pase = 0x%lx, MEM_RET_OK = %d\n", pg_base | MEM_RET_OK, pg_base, MEM_RET_OK);
   return pg_base | MEM_RET_OK;
 
 bad:
@@ -971,7 +1044,29 @@ bool pmptable_check_permission(word_t offset, word_t root_table_base, int type, 
 }
 #endif
 
+bool isa_cvm_check_permission(paddr_t addr, int len, int type, int out_mode){
+#ifndef CONFIG_RV_MCVM
+    return true;  
+#else
+  if(mcvm->BME == 0 || mcvm->CMODE == 1){
+    return true;
+  }
+  word_t bm_base = mcvm->BMA;
+  static bool flag = 0;
+  if (flag == 0){
+    printf("bm_base = %lx\n", bm_base);
+    flag = 1;
+  }
+  word_t ppn = (addr >> PGSHFT);
+  bool is_cvm = (bitmap_read(bm_base + ppn / 8, MEM_TYPE_BM_READ, out_mode) >> (ppn % 8)) & 1;
+  return 1;
+  return is_cvm;
+#endif
+}
+
 bool isa_pmp_check_permission(paddr_t addr, int len, int type, int out_mode) {
+  // printf("进入isa_pmp_check_permission()\n");
+  // printf("addr = %#lx, len = %d, type = %d, out_mode = %d\n", addr, len, type, out_mode);
   bool ifetch = (type == MEM_TYPE_IFETCH);
   __attribute__((unused)) uint32_t mode;
   mode = (out_mode == MODE_M) ? (mstatus->mprv && !ifetch ? mstatus->mpp : cpu.mode) : out_mode;

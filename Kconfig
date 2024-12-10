@@ -91,9 +91,23 @@ config CC
   default "clang" if CC_CLANG
   default "none"
 
+config ENABLE_GDB_DEBUG
+    bool "Enable GDB Debugging (-g)"
+    default n
+    help
+      Select this option to include the -g flag in the compiler options.
+      Note: When this option is enabled, the optimization level will be forced to -O0.
+
+config GDB_DEBUG
+    string
+    default "-g" if ENABLE_GDB_DEBUG
+    default ""
+
 choice
   prompt "Optimization Level"
   default CC_O2
+config CC_Og
+  bool "Og"
 config CC_O0
   bool "O0"
 config CC_O1
@@ -106,6 +120,7 @@ endchoice
 
 config CC_OPT
   string
+  default "" if CC_Og
   default "-O0" if CC_O0
   default "-O1" if CC_O1
   default "-O2" if CC_O2

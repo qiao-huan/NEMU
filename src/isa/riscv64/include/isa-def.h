@@ -82,6 +82,7 @@ typedef struct {
   uint64_t mtvec, stvec;
   uint64_t mcause, scause;
   uint64_t satp;
+  uint64_t mcvm;
   uint64_t mip, mie;
   uint64_t mscratch, sscratch;
   uint64_t mideleg, medeleg;

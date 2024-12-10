@@ -52,6 +52,7 @@ void csr_prepare() {
   cpu.sepc    = sepc->val;
 
   cpu.satp     = satp->val;
+  cpu.mcvm     = mcvm->val;
   cpu.mip      = mip->val;
   cpu.mie      = mie->val;
   cpu.mscratch = mscratch->val;
@@ -112,6 +113,7 @@ void csr_writeback() {
   sepc   ->val = cpu.sepc   ;
 
   satp->val     = cpu.satp;
+  // mcvm->val     = cpu.mcvm;
   mip->val      = cpu.mip;
   mie->val      = cpu.mie;
   mscratch->val = cpu.mscratch;
@@ -386,6 +388,7 @@ void dump_regs() {
   fprintf(fp, "scause %lx\n", cpu.scause);
   fprintf(fp, "sepc %lx\n", cpu.sepc);
   fprintf(fp, "satp %lx\n", cpu.satp);
+  // fprintf(fp, "mcvm %lx\n", cpu.mcvm);
   fprintf(fp, "mip %lx\n", cpu.mip);
   fprintf(fp, "mie %lx\n", cpu.mie);
   fprintf(fp, "mscratch %lx\n", cpu.mscratch);
