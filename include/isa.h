@@ -54,6 +54,10 @@ int isa_mmu_check(vaddr_t vaddr, int len, int type);
 #endif
 paddr_t isa_mmu_translate(vaddr_t vaddr, int len, int type);
 bool isa_pmp_check_permission(paddr_t addr, int len, int type, int mode);
+/**
+ * 返回1：该内存是机密内存   -> 可以访问
+ * 返回0：该内存不是机密内存 -> 不能访问
+ */
 bool isa_cvm_check_permission(paddr_t addr, int len, int type, int out_mode);
 
 // interrupt

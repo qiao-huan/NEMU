@@ -206,7 +206,7 @@ bool check_paddr(paddr_t addr, int len, int type, int mode, vaddr_t vaddr) {
     if (type == MEM_TYPE_WRITE) {
       raise_access_fault(EX_SAF, vaddr);
     }else {
-      Log("isa pmp check failed when checking bitmap by CVM");
+      Log("isa mcvm check failed");
       raise_read_access_fault(type, vaddr);
     }
     return false;
