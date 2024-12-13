@@ -46,6 +46,7 @@ typedef union PageTableEntry {
 #define BMBASE(bma) (bma << BMSHFT)
 #define GET_BIT(bm_base, ppn) (((bm_base[(ppn) / 8] >> ((ppn) % 8)) & 1))
 
+static int pt_level = 0;
 
 // Sv39 & Sv48 page walk
 #define PTE_SIZE 8
@@ -241,6 +242,7 @@ void raise_guest_excep(paddr_t gpaddr, vaddr_t vaddr, int type){
 paddr_t gpa_stage(paddr_t gpaddr, vaddr_t vaddr, int type){
   Logtr("gpa_stage gpaddr: " FMT_PADDR ", vaddr: " FMT_WORD ", type: %d", gpaddr, vaddr, type);
   int max_level = 0;
+  pt_level = 0;
   if (hgatp->mode == 0) {
     return gpaddr;
   } else if (hgatp->mode == 9){
@@ -409,6 +411,7 @@ static paddr_t ptw(vaddr_t vaddr, int type) {
 #else
   if (!check_permission(&pte, true, vaddr, type)) return MEM_RET_FAIL;
 #endif
+  pt_level = level;
   if (level > 0) {
     // superpage
     word_t pg_mask = ((1ull << VPNiSHFT(level)) - 1);
@@ -1048,6 +1051,7 @@ bool isa_cvm_check_permission(paddr_t addr, int len, int type, int out_mode){
   if (addr == 0x80780000) {
     printf("访问地址0x80780000\n");
   }
+
 #ifndef CONFIG_RV_MCVM
     return true;  
 #else
@@ -1062,7 +1066,7 @@ bool isa_cvm_check_permission(paddr_t addr, int len, int type, int out_mode){
     return true;
   }
   word_t bm_base = mcvm->BMA;
-  word_t ppn = (addr >> PGSHFT);
+  word_t ppn = (addr >> (9 * pt_level + PGSHFT) << (9 * pt_level));
   bool is_cvm = (bitmap_read(bm_base + ppn / 8, MEM_TYPE_BM_READ, out_mode) >> (ppn % 8)) & 1;
   return !is_cvm;
 #endif
