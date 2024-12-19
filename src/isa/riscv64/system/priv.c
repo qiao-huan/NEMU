@@ -1272,7 +1272,7 @@ static void csrrw(rtlreg_t *dest, const rtlreg_t *src, uint32_t csrid) {
     bool BME_dest = (csr_read(csr)) & MCVM_BME;
     bool BME_src = *src & MCVM_BME;
     if (BME_dest == 1 && BME_src == 0){
-      printf("试图在BME已经打开的情况下关闭BME\n");
+      // printf("试图在BME已经打开的情况下关闭BME\n");
       // csr_write(csr, csr_read(csr)); 
       csr_write(csr, csr_read(csr));
     } else {

@@ -1048,21 +1048,18 @@ bool pmptable_check_permission(word_t offset, word_t root_table_base, int type, 
 #endif
 
 bool isa_cvm_check_permission(paddr_t addr, int len, int type, int out_mode){
-  if (addr == 0x80780000) {
-    printf("访问地址0x80780000\n");
-  }
 
 #ifndef CONFIG_RV_MCVM
     return true;  
 #else
   if(mcvm->BME == 0) {
     // 若隔离机制关闭，不需要进行bitmap检查
-    if (addr == 0x80780000) {printf("隔离机制关闭，不需要进行bitmap检查\n");}
+    // if (addr == 0x80780000) {printf("隔离机制关闭，不需要进行bitmap检查\n");}
     return true;
   }
   if (mcvm->CMODE == 1) {
     // 安全模式下不需要做 bitmap 检查
-    if (addr == 0x80780000) {printf("安全模式下不需要做 bitmap 检查\n");}
+    // if (addr == 0x80780000) {printf("安全模式下不需要做 bitmap 检查\n");}
     return true;
   }
   word_t bm_base = mcvm->BMA;
