@@ -96,9 +96,9 @@ typedef struct {
   uint64_t vstvec, vsepc, vscause, vstval, vsatp, vsscratch;
 #endif
 
-#ifdef CONFIG_RV_MCVM
-  uint64_t mcvm;
-#endif
+// #ifdef CONFIG_RV_MCVM
+//   uint64_t mcvm;
+// #endif
 
 #ifdef CONFIG_RVV
   //vector
