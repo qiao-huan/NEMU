@@ -1047,25 +1047,25 @@ bool pmptable_check_permission(word_t offset, word_t root_table_base, int type, 
 }
 #endif
 
-bool isa_cvm_check_permission(paddr_t addr, int len, int type, int out_mode){
-
-#ifndef CONFIG_RV_MCVM
+bool isa_bmc_check_permission(paddr_t addr, int len, int type, int out_mode){
+#ifndef CONFIG_RV_MBMC
     return true;  
 #else
-  if(mcvm->BME == 0) {
+  printf("进入isa_bmc_check_permission()\n");
+  if(mbmc->BME == 0) {
     // 若隔离机制关闭，不需要进行bitmap检查
     // if (addr == 0x80780000) {printf("隔离机制关闭，不需要进行bitmap检查\n");}
     return true;
   }
-  if (mcvm->CMODE == 1) {
+  if (mbmc->CMODE == 1) {
     // 安全模式下不需要做 bitmap 检查
     // if (addr == 0x80780000) {printf("安全模式下不需要做 bitmap 检查\n");}
     return true;
   }
-  word_t bm_base = mcvm->BMA;
+  word_t bm_base = (mbmc->BMA) << 6;
   word_t ppn = (addr >> (9 * pt_level + PGSHFT) << (9 * pt_level));
-  bool is_cvm = (bitmap_read(bm_base + ppn / 8, MEM_TYPE_BM_READ, out_mode) >> (ppn % 8)) & 1;
-  return !is_cvm;
+  bool is_bmc = (bitmap_read(bm_base + ppn / 8, MEM_TYPE_BM_READ, out_mode) >> (ppn % 8)) & 1;
+  return !is_bmc;
 #endif
 }
 

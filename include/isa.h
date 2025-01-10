@@ -58,7 +58,7 @@ bool isa_pmp_check_permission(paddr_t addr, int len, int type, int mode);
  * 返回1：该内存是机密内存   -> 不能访问
  * 返回0：该内存不是机密内存 -> 可以访问
  */
-bool isa_cvm_check_permission(paddr_t addr, int len, int type, int out_mode);
+bool isa_bmc_check_permission(paddr_t addr, int len, int type, int out_mode);
 
 // interrupt
 vaddr_t raise_intr(word_t NO, vaddr_t epc);

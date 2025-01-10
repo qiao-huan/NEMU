@@ -40,7 +40,7 @@ enum {
   EX_LGPF,// load guest-page fault, H-extention
   EX_VI,  // virtual instruction, H-extention
   EX_SGPF, // store/amo guest-page fault, H-extention
-  EX_MCVM // MCVM检查异常
+  EX_MBMC // MBMC检查异常
 };
 
 enum {

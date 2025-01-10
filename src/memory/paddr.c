@@ -202,11 +202,11 @@ bool check_paddr(paddr_t addr, int len, int type, int mode, vaddr_t vaddr) {
       raise_read_access_fault(type, vaddr);
     }
     return false;
-  } if (!isa_cvm_check_permission(addr, len, type, mode)){
+  } if (!isa_bmc_check_permission(addr, len, type, mode)){
     if (type == MEM_TYPE_WRITE) {
       raise_access_fault(EX_SAF, vaddr);
     }else {
-      Log("isa mcvm check failed");
+      Log("isa mbmc check failed");
       raise_read_access_fault(type, vaddr);
     }
     return false;

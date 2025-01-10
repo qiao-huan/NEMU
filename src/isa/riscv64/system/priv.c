@@ -202,9 +202,9 @@ static inline word_t* csr_decode(uint32_t addr) {
 #define COUNTEREN_MASK (COUNTEREN_ZICNTR_MASK | COUNTEREN_ZIHPM_MASK)
 
 
-#ifdef CONFIG_RV_MCVM
-  #define MCVM_BME_SHIFT 63
-  #define MCVM_BME (1UL << MCVM_BME_SHIFT)
+#ifdef CONFIG_RV_MBMC
+  #define MBMC_BME_SHIFT 63
+  #define MBMC_BME (1UL << MBMC_BME_SHIFT)
 #endif
 
 #ifdef CONFIG_RV_CSR_MCOUNTINHIBIT_CNTR
@@ -622,7 +622,7 @@ static inline word_t csr_read(word_t *src) {
   else if (is_read(sepc))    { return vsepc->val;}
   else if (is_read(scause))  { return vscause->val;}
   else if (is_read(stval))   { return vstval->val;}
-  else if (is_read(mcvm))   { return mcvm->val;}
+  else if (is_read(mbmc))   { return mbmc->val;}
   else if (is_read(sip))     { return (mip->val & VSI_MASK) >> 1;}
   else if (is_read(satp))    {
     if (cpu.mode == MODE_S && hstatus->vtvm == 1) {
@@ -1262,15 +1262,15 @@ static void csrrw(rtlreg_t *dest, const rtlreg_t *src, uint32_t csrid) {
   word_t tmp = (src != NULL ? *src : 0);
   if (dest != NULL) { *dest = csr_read(csr); }
   if (src != NULL) { 
-#ifndef CONFIG_RV_MCVM
+#ifndef CONFIG_RV_MBMC
   csr_write(csr, tmp);
 #else
   /**
    * 隔离机制开关BME打开后，再次复位前不能关闭机制；
    */
   if (csrid == 0xBC0){
-    bool BME_dest = (csr_read(csr)) & MCVM_BME;
-    bool BME_src = *src & MCVM_BME;
+    bool BME_dest = (csr_read(csr)) & MBMC_BME;
+    bool BME_src = *src & MBMC_BME;
     if (BME_dest == 1 && BME_src == 0){
       // printf("试图在BME已经打开的情况下关闭BME\n");
       // csr_write(csr, csr_read(csr)); 

@@ -88,8 +88,8 @@ void csr_prepare() {
   cpu.vstval  = vstval->val;
   cpu.vsatp   = vsatp->val;
   cpu.vsscratch = vsscratch->val;
-// #ifdef CONFIG_RV_MCVM
-//   cpu.mcvm     = mcvm->val;
+// #ifdef CONFIG_RV_MBMC
+//   cpu.mbmc     = mbmc->val;
 // #endif
 #endif
 #ifdef CONFIG_RV_SDTRIG
@@ -115,7 +115,7 @@ void csr_writeback() {
   sepc   ->val = cpu.sepc   ;
 
   satp->val     = cpu.satp;
-  // mcvm->val     = cpu.mcvm;
+  // mbmc->val     = cpu.mbmc;
   mip->val      = cpu.mip;
   mie->val      = cpu.mie;
   mscratch->val = cpu.mscratch;
@@ -155,8 +155,8 @@ void csr_writeback() {
   vstval->val  = cpu.vstval;
   vsatp->val   = cpu.vsatp;
   vsscratch->val = cpu.vsscratch;
-// #ifdef CONFIG_RV_MCVM
-//   mcvm->val = cpu.mcvm;
+// #ifdef CONFIG_RV_MBMC
+//   mbmc->val = cpu.mbmc;
 // #endif
 #endif
 #ifdef CONFIG_RV_SDTRIG
@@ -393,7 +393,7 @@ void dump_regs() {
   fprintf(fp, "scause %lx\n", cpu.scause);
   fprintf(fp, "sepc %lx\n", cpu.sepc);
   fprintf(fp, "satp %lx\n", cpu.satp);
-  // fprintf(fp, "mcvm %lx\n", cpu.mcvm);
+  // fprintf(fp, "mbmc %lx\n", cpu.mbmc);
   fprintf(fp, "mip %lx\n", cpu.mip);
   fprintf(fp, "mie %lx\n", cpu.mie);
   fprintf(fp, "mscratch %lx\n", cpu.mscratch);

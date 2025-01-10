@@ -8,8 +8,8 @@ config MULTICORE_DIFF
   bool "(Beta) Enable multi-core difftest APIs for RISC-V"
   default false
 
-config RV_MCVM
-  bool "RISC-V MCVM Register"
+config RV_MBMC
+  bool "RISC-V MBMC Register"
   default y
 
 config RVB
