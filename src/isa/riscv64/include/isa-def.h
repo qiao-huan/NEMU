@@ -103,6 +103,7 @@ typedef struct {
   uint64_t mtvec, stvec;
   uint64_t mcause, scause;
   uint64_t satp;
+  // uint64_t mbmc;
   uint64_t mip, mie;
   uint64_t mscratch, sscratch;
   uint64_t mideleg, medeleg;
@@ -115,6 +116,8 @@ typedef struct {
   uint64_t hcounteren, htval, htinst, hgatp, vsstatus;
   uint64_t vstvec, vsepc, vscause, vstval, vsatp, vsscratch;
 #endif
+
+//   uint64_t mbmc;
 
 #ifdef CONFIG_RVV
   //vector

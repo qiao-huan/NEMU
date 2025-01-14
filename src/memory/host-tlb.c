@@ -75,6 +75,9 @@ __attribute__((noinline))
 static word_t hosttlb_read_slowpath(struct Decode *s, vaddr_t vaddr, int len, int type) {
   paddr_t paddr = va2pa(s, vaddr, len, type);
   word_t data = paddr_read(paddr, len, type, type, cpu.mode, vaddr);
+  #ifdef CONFIG_RV_MBMC
+  if(isa_bmc_check_permission(paddr, len, 0, 0)) {
+  #endif
   if (likely(in_pmem(paddr))) {
     HostTLBEntry *e = type == MEM_TYPE_IFETCH ?
       &hostxtlb[hosttlb_idx(vaddr)] : &hostrtlb[hosttlb_idx(vaddr)];
@@ -85,6 +88,9 @@ static word_t hosttlb_read_slowpath(struct Decode *s, vaddr_t vaddr, int len, in
     #endif
     e->gvpn = hosttlb_vpn(vaddr);
   }
+  #ifdef CONFIG_RV_MBMC
+  }
+  #endif
   Logtr("Slowpath, vaddr " FMT_WORD " --> paddr: " FMT_PADDR, vaddr, paddr);
   return data;
 }
@@ -93,6 +99,9 @@ __attribute__((noinline))
 static void hosttlb_write_slowpath(struct Decode *s, vaddr_t vaddr, int len, word_t data) {
   paddr_t paddr = va2pa(s, vaddr, len, MEM_TYPE_WRITE);
   paddr_write(paddr, len, data, cpu.mode, vaddr);
+  #ifdef CONFIG_RV_MBMC
+  if(isa_bmc_check_permission(paddr, len, 0, 0)) {
+  #endif
   if (likely(in_pmem(paddr))) {
     HostTLBEntry *e = &hostwtlb[hosttlb_idx(vaddr)];
     #ifdef CONFIG_USE_SPARSEMM
@@ -102,6 +111,9 @@ static void hosttlb_write_slowpath(struct Decode *s, vaddr_t vaddr, int len, wor
     #endif
     e->gvpn = hosttlb_vpn(vaddr);
   }
+  #ifdef CONFIG_RV_MBMC
+  }
+  #endif
 }
 
 word_t hosttlb_read(struct Decode *s, vaddr_t vaddr, int len, int type) {

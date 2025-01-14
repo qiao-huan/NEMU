@@ -57,6 +57,7 @@ bool isa_difftest_checkregs(CPU_state *ref_r, vaddr_t pc) {
     check_reg(scause    );
     check_reg(sepc      );
     check_reg(satp      );
+    // check_reg(mbmc      );
     check_reg(mip       );
     check_reg(mie       );
     check_reg(mscratch  );

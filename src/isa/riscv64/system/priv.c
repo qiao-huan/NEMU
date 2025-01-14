@@ -447,6 +447,10 @@ static inline word_t* csr_decode(uint32_t addr) {
 
 #define COUNTEREN_MASK (COUNTEREN_ZICNTR_MASK | COUNTEREN_ZIHPM_MASK)
 
+#ifdef CONFIG_RV_MBMC
+#define MBMC_BME_SHIFT 2
+#define MBMC_BME (1UL << MBMC_BME_SHIFT)
+#endif
 
 #ifdef CONFIG_RV_CSR_MCOUNTINHIBIT_CNTR
   #define MCOUNTINHIBIT_CNTR_MASK (0x5UL)
@@ -1407,6 +1411,10 @@ static word_t csr_read(uint32_t csrid) {
       IFDEF(CONFIG_RVH, if (cpu.v) return vmode_get_sip());
       IFNDEF(CONFIG_RVH, difftest_skip_ref());
       return non_vmode_get_sip();
+#ifdef CONFIG_RV_MBMC
+    case CSR_MBMC:
+      return mbmc->val;
+#endif
 #ifdef CONFIG_RV_SSTC
     case CSR_STIMECMP:
       IFDEF(CONFIG_RVH, if (cpu.v) return vstimecmp->val);
@@ -1929,7 +1937,17 @@ static void csr_write(uint32_t csrid, word_t src) {
 #endif // CONFIG_RVH
       break;
     }
-
+#ifdef CONFIG_RV_MBMC
+    case CSR_MBMC:
+      bool BME_dest = mbmc->val & MBMC_BME;
+      uint64_t mbmc_mask;
+      if (BME_dest == 1) {
+        mbmc_mask = 0x1;
+      } else {
+        mbmc_mask = 0xffffffffffffffc5ULL;
+      }
+      mbmc->val = mask_bitset(mbmc->val, mbmc_mask, src); break;
+#endif
 #ifdef CONFIG_MISA_UNCHANGEABLE
     case CSR_MISA: break;
 #endif // CONFIG_MISA_UNCHANGEABLE
@@ -2510,6 +2528,7 @@ static void csrrw(rtlreg_t *dest, const rtlreg_t *src, uint32_t csrid, uint32_t 
   uint32_t funct3 = isa.instr.i.funct3;
   bool is_write = !( BITS(funct3, 1, 1) && (rs1 == 0) );
   csr_permit_check(csrid, is_write);
+  
   switch (funct3) {
     case FUNCT3_CSRRW:
     case FUNCT3_CSRRWI:

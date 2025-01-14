@@ -86,6 +86,7 @@ void csr_prepare() {
   cpu.vstval  = vstval->val;
   cpu.vsatp   = vsatp->val;
   cpu.vsscratch = vsscratch->val;
+  //   cpu.mbmc     = mbmc->val;
 #endif
 #ifdef CONFIG_RV_SDTRIG
   cpu.tselect  = tselect->val;
@@ -109,6 +110,7 @@ void csr_writeback() {
   sepc   ->val = cpu.sepc   ;
 
   satp->val     = cpu.satp;
+  // mbmc->val     = cpu.mbmc;
   mip->val      = cpu.mip;
   mie->val      = cpu.mie;
   mscratch->val = cpu.mscratch;
@@ -148,6 +150,7 @@ void csr_writeback() {
   vstval->val  = cpu.vstval;
   vsatp->val   = cpu.vsatp;
   vsscratch->val = cpu.vsscratch;
+  //   mbmc->val = cpu.mbmc;
 #endif
 #ifdef CONFIG_RV_SDTRIG
   tselect->val  = cpu.tselect;
@@ -383,6 +386,7 @@ void dump_regs() {
   fprintf(fp, "scause %lx\n", cpu.scause);
   fprintf(fp, "sepc %lx\n", cpu.sepc);
   fprintf(fp, "satp %lx\n", cpu.satp);
+  // fprintf(fp, "mbmc %lx\n", cpu.mbmc);
   fprintf(fp, "mip %lx\n", cpu.mip);
   fprintf(fp, "mie %lx\n", cpu.mie);
   fprintf(fp, "mscratch %lx\n", cpu.mscratch);
