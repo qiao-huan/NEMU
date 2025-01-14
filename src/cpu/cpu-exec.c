@@ -524,6 +524,7 @@ void lightqs_take_reg_snapshot() {
   reg_ss.scause = cpu.scause;
   reg_ss.sepc = cpu.sepc;
   reg_ss.satp = cpu.satp;
+  reg_ss.mbmc = cpu.mbmc;
   reg_ss.mip = cpu.mip;
   reg_ss.mie = cpu.mie;
   reg_ss.mscratch = cpu.mscratch;
@@ -564,6 +565,7 @@ void lightqs_take_spec_reg_snapshot() {
   spec_reg_ss.scause = cpu.scause;
   spec_reg_ss.sepc = cpu.sepc;
   spec_reg_ss.satp = cpu.satp;
+  spec_reg_ss.mbmc = cpu.mbmc;
   spec_reg_ss.mip = cpu.mip;
   spec_reg_ss.mie = cpu.mie;
   spec_reg_ss.mscratch = cpu.mscratch;
@@ -613,6 +615,7 @@ uint64_t lightqs_restore_reg_snapshot(uint64_t n) {
   cpu.scause = reg_ss.scause;
   cpu.sepc = reg_ss.sepc;
   cpu.satp = reg_ss.satp;
+  cpu.mbmc = reg_ss.mbmc;
   cpu.mip = reg_ss.mip;
   cpu.mie = reg_ss.mie;
   cpu.mscratch = reg_ss.mscratch;

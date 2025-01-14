@@ -458,6 +458,9 @@
   #define CSRS_M_SMRNMI(f)
 #endif //CONFIG_RV_SMRNMI
 
+#define CSRS_M_BMC(f) \
+ f(mbmc       , 0xBC0)
+
 /** ALL **/
 #define CSRS_M(f) \
   CSRS_M_INFOMATION(f) \
@@ -473,7 +476,8 @@
   CSRS_M_AIA(f) \
   CSRS_M_SMRNMI(f) \
   CSRS_DEBUG_MODE(f) \
-  CSRS_M_CUSTOM(f)
+  CSRS_M_CUSTOM(f) \
+  CSRS_M_BMC(f)
 
 
 /* ALL CSRs */
@@ -1013,6 +1017,14 @@ CSR_STRUCT_START(satp)
   uint64_t asid:16;
   uint64_t mode: 4;
 CSR_STRUCT_END(satp)
+
+CSR_STRUCT_START(mbmc)
+  uint64_t BMA  :  58;
+  uint64_t RSV  :   3;
+  uint64_t BME  :   1;
+  uint64_t BCLEAR:  1;
+  uint64_t CMODE:   1;
+CSR_STRUCT_END(mbmc)
 
 #ifdef CONFIG_RV_SSCOFPMF
 CSR_STRUCT_START(scountovf)

@@ -207,9 +207,18 @@ bool check_paddr(paddr_t addr, int len, int type, int trap_type, int mode, vaddr
       raise_read_access_fault(trap_type, vaddr);
     }
     return false;
-  } else {
-    return true;
   }
+  if (!isa_bmc_check_permission(addr, len, type, mode)){
+    if (type == MEM_TYPE_WRITE) {
+      raise_access_fault(EX_SAF, vaddr);
+    }else {
+      Log("isa mbmc check failed");
+      raise_read_access_fault(type, vaddr);
+    }
+    return false;
+  }
+  return true;
+  
 }
 
 word_t paddr_read(paddr_t addr, int len, int type, int trap_type, int mode, vaddr_t vaddr) {
@@ -268,6 +277,12 @@ word_t paddr_read(paddr_t addr, int len, int type, int trap_type, int mode, vadd
   }
   return 0;
 #endif // CONFIG_SHARE
+}
+
+word_t bitmap_read(paddr_t addr, int type, int mode) {
+  // assert(type == MEM_TYPE_BM_READ);
+  // assert (likely(in_pmem(addr)));
+  return pmem_read(addr, 1);
 }
 
 #ifdef CONFIG_STORE_LOG

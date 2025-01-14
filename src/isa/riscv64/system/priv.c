@@ -447,6 +447,8 @@ static inline word_t* csr_decode(uint32_t addr) {
 
 #define COUNTEREN_MASK (COUNTEREN_ZICNTR_MASK | COUNTEREN_ZIHPM_MASK)
 
+#define MBMC_BME_SHIFT 2
+#define MBMC_BME (1UL << MBMC_BME_SHIFT)
 
 #ifdef CONFIG_RV_CSR_MCOUNTINHIBIT_CNTR
   #define MCOUNTINHIBIT_CNTR_MASK (0x5UL)
@@ -1407,6 +1409,10 @@ static word_t csr_read(uint32_t csrid) {
       IFDEF(CONFIG_RVH, if (cpu.v) return vmode_get_sip());
       IFNDEF(CONFIG_RVH, difftest_skip_ref());
       return non_vmode_get_sip();
+    case CSR_MBMC:
+      IFDEF(CONFIG_RVH, if (cpu.v) return mbmc->val);
+      // 这里有待商榷
+      return mbmc->val;
 #ifdef CONFIG_RV_SSTC
     case CSR_STIMECMP:
       IFDEF(CONFIG_RVH, if (cpu.v) return vstimecmp->val);
@@ -2522,7 +2528,17 @@ static void csrrw(rtlreg_t *dest, const rtlreg_t *src, uint32_t csrid, uint32_t 
     case FUNCT3_CSRRSI:
       *dest = csr_read(csrid);
       if (rs1) {
-        csr_write(csrid, *src | *dest);
+        if (csrid == 0xBC0) {
+          bool BME_dest = (csr_read(csrid)) & MBMC_BME;
+          bool BME_src = *src & MBMC_BME;
+          if (BME_dest == 1 && BME_src == 0){
+            csr_write(csrid, csr_read(csrid) | *dest);
+          } else {
+            csr_write(csrid, *src | *dest);
+          }
+        } else {
+          csr_write(csrid, *src | *dest);
+        }
       }
       break;
     case FUNCT3_CSRRC:
