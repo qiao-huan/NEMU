@@ -1410,8 +1410,12 @@ static word_t csr_read(uint32_t csrid) {
       IFNDEF(CONFIG_RVH, difftest_skip_ref());
       return non_vmode_get_sip();
     case CSR_MBMC:
-      IFDEF(CONFIG_RVH, if (cpu.v) return mbmc->val);
-      // 这里有待商榷
+#ifdef CONFIG_RVH
+    if (cpu.v) {
+        printf("bmc: %#lx\n", mbmc->val);
+        return mbmc->val;
+    }
+#endif
       return mbmc->val;
 #ifdef CONFIG_RV_SSTC
     case CSR_STIMECMP:
@@ -1935,7 +1939,7 @@ static void csr_write(uint32_t csrid, word_t src) {
 #endif // CONFIG_RVH
       break;
     }
-
+    case CSR_MBMC: mbmc->val = src; break;
 #ifdef CONFIG_MISA_UNCHANGEABLE
     case CSR_MISA: break;
 #endif // CONFIG_MISA_UNCHANGEABLE
@@ -2516,29 +2520,30 @@ static void csrrw(rtlreg_t *dest, const rtlreg_t *src, uint32_t csrid, uint32_t 
   uint32_t funct3 = isa.instr.i.funct3;
   bool is_write = !( BITS(funct3, 1, 1) && (rs1 == 0) );
   csr_permit_check(csrid, is_write);
+  
   switch (funct3) {
     case FUNCT3_CSRRW:
     case FUNCT3_CSRRWI:
       if (rd) {
         *dest = csr_read(csrid);
       }
-      csr_write(csrid, *src);
+      if (csrid == 0xBC0) {
+        bool BME_dest = (csr_read(csrid)) & MBMC_BME;
+        bool BME_src = *src & MBMC_BME;
+        if (BME_dest == 1 && BME_src == 0) {
+          // deny write
+        } else {
+          csr_write(csrid, *src);
+        }
+      } else {
+        csr_write(csrid, *src);
+      }
       break;
     case FUNCT3_CSRRS:
     case FUNCT3_CSRRSI:
       *dest = csr_read(csrid);
       if (rs1) {
-        if (csrid == 0xBC0) {
-          bool BME_dest = (csr_read(csrid)) & MBMC_BME;
-          bool BME_src = *src & MBMC_BME;
-          if (BME_dest == 1 && BME_src == 0){
-            csr_write(csrid, csr_read(csrid) | *dest);
-          } else {
-            csr_write(csrid, *src | *dest);
-          }
-        } else {
-          csr_write(csrid, *src | *dest);
-        }
+        csr_write(csrid, *src | *dest);
       }
       break;
     case FUNCT3_CSRRC:

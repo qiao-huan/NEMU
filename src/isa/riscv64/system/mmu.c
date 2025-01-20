@@ -1049,6 +1049,7 @@ bool isa_bmc_check_permission(paddr_t addr, int len, int type, int out_mode){
     return true;
   }
   word_t bm_base = (mbmc->BMA) << 6;
+  // word_t ppn = ((addr >> PGSHFT));
   word_t ppn = (addr >> (9 * pt_level + PGSHFT) << (9 * pt_level));
   bool is_bmc = (bitmap_read(bm_base + ppn / 8, MEM_TYPE_BM_READ, out_mode) >> (ppn % 8)) & 1;
   return !is_bmc;
