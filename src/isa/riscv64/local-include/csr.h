@@ -34,7 +34,7 @@
 #define CUSTOM_CSR_SMBLOCKCTL 0x5c3
 #define CUSTOM_CSR_SRNCTL     0x5c4
 #define CUSTOM_CSR_SFETCHCTL  0x9e0
-#define CUSTOM_CSR_MCOREPWR   0xbcc
+#define CUSTOM_CSR_MCOREPWR   0xbc0
 #define CUSTOM_CSR_MFLUSHPWR  0xbc1
 
 #define CUSTOM_CSR_SBPCTL_WMASK     0x7f
@@ -437,7 +437,7 @@
 #endif // CONFIG_RV_SDEXT
 
 #define CSRS_M_CUSTOM(f) \
-  f(mcorepwr   , 0xBCC) f(mflushpwr  , 0xBC1)
+  f(mcorepwr   , 0xBC0) f(mflushpwr  , 0xBC1)
 
 /** Machine AIA Registers **/
 #ifdef CONFIG_RV_IMSIC
@@ -459,7 +459,7 @@
 #endif //CONFIG_RV_SMRNMI
 
 #define CSRS_M_BMC(f) \
- f(mbmc       , 0xBC0)
+ f(mbmc       , 0xBC2)
 
 /** ALL **/
 #define CSRS_M(f) \

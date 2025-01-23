@@ -2527,7 +2527,7 @@ static void csrrw(rtlreg_t *dest, const rtlreg_t *src, uint32_t csrid, uint32_t 
       if (rd) {
         *dest = csr_read(csrid);
       }
-      if (csrid == 0xBC0) {
+      if (csrid == 0xBC2) {
         bool BME_dest = (csr_read(csrid)) & MBMC_BME;
         bool BME_src = *src & MBMC_BME;
         if (BME_dest == 1 && BME_src == 0) {
