@@ -141,7 +141,9 @@ void isa_reg_display() {
     DISPLAY_CSR("htval", htval->val);
     printf("\n");
     DISPLAY_CSR("mtinst", mtinst->val);
+    #ifdef CONFIG_RV_MBMC
     DISPLAY_CSR("mbmc", mbmc->val);
+    #endif
     DISPLAY_CSR("htinst", htinst->val);
     printf("\n");
   #endif // CONFIG_RVH

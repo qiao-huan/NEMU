@@ -43,13 +43,16 @@ typedef union PageTableEntry {
 } PTE;
 
 #define PGSHFT 12
+#ifdef CONFIG_RV_MBMC
 #define BMSHFT 32
+#endif
 #define PGMASK ((1ull << PGSHFT) - 1)
 #define PGBASE(pn) ((uint64_t) pn << PGSHFT)
+#ifdef CONFIG_RV_MBMC
 #define BMBASE(bma) (bma << BMSHFT)
 #define GET_BIT(bm_base, ppn) (((bm_base[(ppn) / 8] >> ((ppn) % 8)) & 1))
-
 static int pt_level = 0;
+#endif
 
 // Sv39 & Sv48 page walk
 #define PTE_SIZE 8
@@ -252,7 +255,9 @@ vaddr_t get_effective_address(vaddr_t vaddr, int type) {
 paddr_t gpa_stage(paddr_t gpaddr, vaddr_t vaddr, int type, int trap_type, bool ishlvx, bool is_support_vs){
   Logtr("gpa_stage gpaddr: " FMT_PADDR ", vaddr: " FMT_WORD ", type: %d", gpaddr, vaddr, type);
   int max_level = 0;
+  #ifdef CONFIG_RV_MBMC
   pt_level = 0;
+  #endif
   if (hgatp->mode == HGATP_MODE_BARE) {
     return gpaddr;
   } else if (hgatp->mode == HGATP_MODE_Sv48x4){
@@ -446,7 +451,9 @@ static paddr_t ptw(vaddr_t vaddr, int type) {
 #else
   if (!check_permission(&pte, true, vaddr, type)) return MEM_RET_FAIL;
 #endif
+  #ifdef CONFIG_RV_MBMC
   pt_level = level;
+  #endif
   if (level > 0) {
     // superpage
     word_t pg_mask = ((1ull << VPNiSHFT(level)) - 1);
@@ -1041,6 +1048,7 @@ bool pmptable_check_permission(word_t offset, word_t root_table_base, int type, 
 }
 #endif
 
+#ifdef CONFIG_RV_MBMC
 bool isa_bmc_check_permission(paddr_t addr, int len, int type, int out_mode){
   if(mbmc->BME == 0) {
     return true;
@@ -1054,6 +1062,7 @@ bool isa_bmc_check_permission(paddr_t addr, int len, int type, int out_mode){
   bool is_bmc = (bitmap_read(bm_base + ppn / 8, MEM_TYPE_BM_READ, out_mode) >> (ppn % 8)) & 1;
   return !is_bmc;
 }
+#endif
 
 
 

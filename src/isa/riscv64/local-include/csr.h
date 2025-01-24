@@ -458,10 +458,14 @@
   #define CSRS_M_SMRNMI(f)
 #endif //CONFIG_RV_SMRNMI
 
+#ifdef CONFIG_RV_MBMC
 #define CSRS_M_BMC(f) \
  f(mbmc       , 0xBC2)
+#endif
+
 
 /** ALL **/
+#ifdef CONFIG_RV_MBMC
 #define CSRS_M(f) \
   CSRS_M_INFOMATION(f) \
   CSRS_M_TRAP_SETUP(f) \
@@ -478,6 +482,23 @@
   CSRS_DEBUG_MODE(f) \
   CSRS_M_CUSTOM(f) \
   CSRS_M_BMC(f)
+#else
+  #define CSRS_M(f) \
+  CSRS_M_INFOMATION(f) \
+  CSRS_M_TRAP_SETUP(f) \
+  CSRS_M_TRAP_HANDLING(f) \
+  CSRS_M_CONFIGURATION(f) \
+  CSRS_M_MEMORY_PROTECTION(f) \
+  CSRS_M_STATE_ENABLE(f) \
+  CSRS_M_NON_MASKABLE_INTERRUPT_HANDLING(f) \
+  CSRS_M_COUNTER_TIMERS(f) \
+  CSRS_M_COUNTER_SETUP(f) \
+  CSRS_M_DEBUG_TRACE(f) \
+  CSRS_M_AIA(f) \
+  CSRS_M_SMRNMI(f) \
+  CSRS_DEBUG_MODE(f) \
+  CSRS_M_CUSTOM(f)
+#endif
 
 
 /* ALL CSRs */
@@ -1018,6 +1039,7 @@ CSR_STRUCT_START(satp)
   uint64_t mode: 4;
 CSR_STRUCT_END(satp)
 
+#ifdef CONFIG_RV_MBMC
 CSR_STRUCT_START(mbmc)
   uint64_t CMODE:   1;
   uint64_t BCLEAR:  1;
@@ -1025,6 +1047,7 @@ CSR_STRUCT_START(mbmc)
   uint64_t RSV  :   3;
   uint64_t BMA  :  58;
 CSR_STRUCT_END(mbmc)
+#endif
 
 #ifdef CONFIG_RV_SSCOFPMF
 CSR_STRUCT_START(scountovf)
