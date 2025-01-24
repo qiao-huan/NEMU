@@ -465,7 +465,6 @@
     #define CSRS_M_BMC(f)
 #endif
 
-
 /** ALL **/
 #define CSRS_M(f) \
   CSRS_M_INFOMATION(f) \
@@ -483,7 +482,6 @@
   CSRS_DEBUG_MODE(f) \
   CSRS_M_CUSTOM(f) \
   CSRS_M_BMC(f)
-
 
 
 /* ALL CSRs */
