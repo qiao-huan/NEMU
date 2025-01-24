@@ -211,8 +211,8 @@ bool check_paddr(paddr_t addr, int len, int type, int trap_type, int mode, vaddr
   #ifdef CONFIG_RV_MBMC
   if (!isa_bmc_check_permission(addr, len, type, mode)){
     if (type == MEM_TYPE_WRITE) {
-      raise_access_fault(EX_SAF, vaddr);
-    }else {
+      raise_access_fault(EX_MBMC, vaddr);
+    } else {
       Log("isa mbmc check failed");
       raise_read_access_fault(type, vaddr);
     }
@@ -220,7 +220,6 @@ bool check_paddr(paddr_t addr, int len, int type, int trap_type, int mode, vaddr
   }
   #endif
   return true;
-  
 }
 
 word_t paddr_read(paddr_t addr, int len, int type, int trap_type, int mode, vaddr_t vaddr) {
@@ -283,8 +282,6 @@ word_t paddr_read(paddr_t addr, int len, int type, int trap_type, int mode, vadd
 
 #ifdef CONFIG_RV_MBMC
 word_t bitmap_read(paddr_t addr, int type, int mode) {
-  // assert(type == MEM_TYPE_BM_READ);
-  // assert (likely(in_pmem(addr)));
   return pmem_read(addr, 1);
 }
 #endif

@@ -1050,7 +1050,7 @@ bool pmptable_check_permission(word_t offset, word_t root_table_base, int type, 
 
 #ifdef CONFIG_RV_MBMC
 bool isa_bmc_check_permission(paddr_t addr, int len, int type, int out_mode){
-  if(mbmc->BME == 0) {
+  if (mbmc->BME == 0) {
     return true;
   }
   if (mbmc->CMODE == 1) {
@@ -1063,8 +1063,6 @@ bool isa_bmc_check_permission(paddr_t addr, int len, int type, int out_mode){
   return !is_bmc;
 }
 #endif
-
-
 
 bool isa_pmp_check_permission(paddr_t addr, int len, int type, int out_mode) {
   bool ifetch = (type == MEM_TYPE_IFETCH);

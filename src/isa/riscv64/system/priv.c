@@ -1411,10 +1411,6 @@ static word_t csr_read(uint32_t csrid) {
       IFDEF(CONFIG_RVH, if (cpu.v) return vmode_get_sip());
       IFNDEF(CONFIG_RVH, difftest_skip_ref());
       return non_vmode_get_sip();
-#ifdef CONFIG_RV_MBMC
-    case CSR_MBMC:
-      return mbmc->val;
-#endif
 #ifdef CONFIG_RV_SSTC
     case CSR_STIMECMP:
       IFDEF(CONFIG_RVH, if (cpu.v) return vstimecmp->val);
@@ -1946,7 +1942,8 @@ static void csr_write(uint32_t csrid, word_t src) {
       } else {
         mbmc_mask = 0xffffffffffffffc5ULL;
       }
-      mbmc->val = mask_bitset(mbmc->val, mbmc_mask, src); break;
+      mbmc->val = mask_bitset(mbmc->val, mbmc_mask, src); 
+      break;
 #endif
 #ifdef CONFIG_MISA_UNCHANGEABLE
     case CSR_MISA: break;

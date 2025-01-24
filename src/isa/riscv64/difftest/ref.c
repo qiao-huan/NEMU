@@ -86,7 +86,6 @@ void csr_prepare() {
   cpu.vstval  = vstval->val;
   cpu.vsatp   = vsatp->val;
   cpu.vsscratch = vsscratch->val;
-  //   cpu.mbmc     = mbmc->val;
 #endif
 #ifdef CONFIG_RV_SDTRIG
   cpu.tselect  = tselect->val;
@@ -96,6 +95,9 @@ void csr_prepare() {
 #ifndef CONFIG_FPU_NONE
   cpu.fcsr     = fcsr->val;
 #endif // CONFIG_FPU_NONE
+#ifdef CONFIG_RV_MBMC
+  cpu.mbmc = mbmc->val;
+#endif
 }
 
 void csr_writeback() {
@@ -110,7 +112,6 @@ void csr_writeback() {
   sepc   ->val = cpu.sepc   ;
 
   satp->val     = cpu.satp;
-  // mbmc->val     = cpu.mbmc;
   mip->val      = cpu.mip;
   mie->val      = cpu.mie;
   mscratch->val = cpu.mscratch;
@@ -150,7 +151,6 @@ void csr_writeback() {
   vstval->val  = cpu.vstval;
   vsatp->val   = cpu.vsatp;
   vsscratch->val = cpu.vsscratch;
-  //   mbmc->val = cpu.mbmc;
 #endif
 #ifdef CONFIG_RV_SDTRIG
   tselect->val  = cpu.tselect;
@@ -160,6 +160,9 @@ void csr_writeback() {
 #ifndef CONFIG_FPU_NONE
   fcsr->val     = cpu.fcsr;
 #endif // CONFIG_FPU_NONE
+#ifdef CONFIG_RV_MBMC
+  mbmc->val = cpu.mbmc;
+#endif
 }
 #ifdef CONFIG_LIGHTQS
 extern uint64_t stable_log_begin, spec_log_begin;
@@ -386,7 +389,6 @@ void dump_regs() {
   fprintf(fp, "scause %lx\n", cpu.scause);
   fprintf(fp, "sepc %lx\n", cpu.sepc);
   fprintf(fp, "satp %lx\n", cpu.satp);
-  // fprintf(fp, "mbmc %lx\n", cpu.mbmc);
   fprintf(fp, "mip %lx\n", cpu.mip);
   fprintf(fp, "mie %lx\n", cpu.mie);
   fprintf(fp, "mscratch %lx\n", cpu.mscratch);
@@ -412,6 +414,9 @@ void dump_regs() {
     fprintf(fp, "fpr %d %lx\n", i, cpu.fpr[i]._64);
   }
 #endif // CONFIG_FPU_NONE
+#ifdef CONFIG_RV_MBMC
+  fprintf(fp, "mbmc %lx\n", cpu.mbmc);
+#endif
 }
 
 #ifdef CONFIG_MULTICORE_DIFF
