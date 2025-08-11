@@ -52,7 +52,6 @@ typedef union PageTableEntry {
 #ifdef CONFIG_RV_MBMC
 #define BMBASE(bma) (bma << BMSHFT)
 #define GET_BIT(bm_base, ppn) (((bm_base[(ppn) / 8] >> ((ppn) % 8)) & 1))
-static int pt_level = 0;
 #endif
 
 // Sv39 & Sv48 page walk
@@ -256,9 +255,6 @@ vaddr_t get_effective_address(vaddr_t vaddr, int type) {
 paddr_t gpa_stage(paddr_t gpaddr, vaddr_t vaddr, int type, int trap_type, bool ishlvx, bool is_support_vs){
   Logtr("gpa_stage gpaddr: " FMT_PADDR ", vaddr: " FMT_WORD ", type: %d", gpaddr, vaddr, type);
   int max_level = 0;
-  #ifdef CONFIG_RV_MBMC
-  pt_level = 0;
-  #endif
   if (hgatp->mode == HGATP_MODE_BARE) {
     return gpaddr;
   } else if (hgatp->mode == HGATP_MODE_Sv48x4){
@@ -323,38 +319,64 @@ paddr_t gpa_stage(paddr_t gpaddr, vaddr_t vaddr, int type, int trap_type, bool i
       break;
     } else if (ISNDEF(CONFIG_RV_SVNAPOT) && pte.n) {
       break;
-    } else if (!pte.u) {
-      break;
-    } else if (
-      type == MEM_TYPE_IFETCH || ishlvx ? !pte.x:
-      type == MEM_TYPE_READ           ? !pte.r && !(mstatus->mxr && pte.x):
-                                        !(pte.r && pte.w)
-    ) {
-      break;
-    } else if (!pte.a || (!pte.d && type == MEM_TYPE_WRITE)) {
-      // TODO: support hardware a/d update.
-      break;
     } else {
-      if (level > 0) {
-        // superpage
+#ifdef CONFIG_RV_MBMC
+      bool bmc_flag = 1;
+      paddr_t mbmc_paddr = pg_base;
+      if (level > 0){
         word_t pg_mask = ((1ull << VPNiSHFT(level)) - 1);
-        if ((pg_base & pg_mask) != 0) {
-          // misaligned superpage
-          break;
+        if ((mbmc_paddr & pg_mask) != 0) {
+          bmc_flag = 0;
         } else if (pte.n) {
-          // superpage but napot
-          break;
+          bmc_flag = 0;
+        } else {
+          mbmc_paddr = (mbmc_paddr & ~pg_mask) | (vaddr & pg_mask & ~PGMASK);
         }
-        pg_base = (pg_base & ~pg_mask) | (gpaddr & pg_mask & ~PGMASK);
-      } else if (pte.n) {
+      } else if (pte.n){
         if ((pte.ppn & SVNAPOTMASK) != 0b1000) {
-          break;
+          bmc_flag = 0;
+        } else {
+          word_t pg_mask = ((1ull << SVNAPOTSHFT) - 1);
+          mbmc_paddr = (mbmc_paddr & ~pg_mask) | (vaddr & pg_mask & ~PGMASK);
         }
-        word_t pg_mask = ((1ull << SVNAPOTSHFT) - 1);
-        pg_base = (pg_base & ~pg_mask) | (gpaddr & pg_mask & ~PGMASK);
       }
-      cpu.pbmt = pte.pbmt;
-      return pg_base | (gpaddr & PAGE_MASK);
+      if(bmc_flag){
+        check_paddr_mbmc(mbmc_paddr, type, vaddr);
+      }
+#endif
+      if (!pte.u) {
+        break;
+      } else if (
+        type == MEM_TYPE_IFETCH || ishlvx ? !pte.x:
+        type == MEM_TYPE_READ           ? !pte.r && !(mstatus->mxr && pte.x):
+                                          !(pte.r && pte.w)
+      ) {
+        break;
+      } else if (!pte.a || (!pte.d && type == MEM_TYPE_WRITE)) {
+        // TODO: support hardware a/d update.
+        break;
+      } else {
+        if (level > 0) {
+          // superpage
+          word_t pg_mask = ((1ull << VPNiSHFT(level)) - 1);
+          if ((pg_base & pg_mask) != 0) {
+            // misaligned superpage
+            break;
+          } else if (pte.n) {
+            // superpage but napot
+            break;
+          }
+          pg_base = (pg_base & ~pg_mask) | (gpaddr & pg_mask & ~PGMASK);
+        } else if (pte.n) {
+          if ((pte.ppn & SVNAPOTMASK) != 0b1000) {
+            break;
+          }
+          word_t pg_mask = ((1ull << SVNAPOTSHFT) - 1);
+          pg_base = (pg_base & ~pg_mask) | (gpaddr & pg_mask & ~PGMASK);
+        }
+        cpu.pbmt = pte.pbmt;
+        return pg_base | (gpaddr & PAGE_MASK);
+      }
     }
   }
   raise_guest_excep(gpaddr, vaddr, trap_type, is_support_vs);
@@ -478,14 +500,37 @@ static paddr_t ptw(vaddr_t vaddr, int type) {
       if (level < 0) { goto bad; }
     }
   }
+#ifdef CONFIG_RV_MBMC
+  if (!virt){
+    bool bmc_flag = 1;
+    paddr_t mbmc_paddr = pg_base;
+    if (level > 0){
+      word_t pg_mask = ((1ull << VPNiSHFT(level)) - 1);
+      if ((mbmc_paddr & pg_mask) != 0) {
+        bmc_flag = 0;
+      } else if (pte.n) {
+        bmc_flag = 0;
+      } else {
+        mbmc_paddr = (mbmc_paddr & ~pg_mask) | (vaddr & pg_mask & ~PGMASK);
+      }
+    } else if (pte.n){
+      if ((pte.ppn & SVNAPOTMASK) != 0b1000) {
+        bmc_flag = 0;
+      } else {
+        word_t pg_mask = ((1ull << SVNAPOTSHFT) - 1);
+        mbmc_paddr = (mbmc_paddr & ~pg_mask) | (vaddr & pg_mask & ~PGMASK);
+      }
+    }
+    if(bmc_flag){
+      check_paddr_mbmc(mbmc_paddr, type, vaddr);
+    }
+  }
+#endif
 #ifdef CONFIG_RVH
   if (!check_permission(&pte, true, vaddr, type, virt, mode)) return MEM_RET_FAIL;
 #else
   if (!check_permission(&pte, true, vaddr, type)) return MEM_RET_FAIL;
 #endif
-  #ifdef CONFIG_RV_MBMC
-  pt_level = level;
-  #endif
   if (level > 0) {
     // superpage
     word_t pg_mask = ((1ull << VPNiSHFT(level)) - 1);
@@ -1079,7 +1124,7 @@ bool pmptable_check_permission(word_t offset, word_t root_table_base, int type, 
 #endif
 
 #ifdef CONFIG_RV_MBMC
-bool isa_bmc_check_permission(paddr_t addr, int len, int type, int out_mode) {
+bool isa_bmc_check_permission(paddr_t addr) {
   if (mbmc->BME == 0) {
     return true;
   }
@@ -1087,9 +1132,8 @@ bool isa_bmc_check_permission(paddr_t addr, int len, int type, int out_mode) {
     return true;
   }
   word_t bm_base = (mbmc->BMA) << 6;
-  // word_t ppn = ((addr >> PGSHFT));
-  word_t ppn = (addr >> (9 * pt_level + PGSHFT) << (9 * pt_level));
-  bool is_bmc = (bitmap_read(bm_base + ppn / 8, MEM_TYPE_BM_READ, out_mode) >> (ppn % 8)) & 1;
+  word_t ppn = ((addr >> PGSHFT));
+  bool is_bmc = (bitmap_read(bm_base + ppn / 8, MEM_TYPE_BM_READ) >> (ppn % 8)) & 1;
   return !is_bmc;
 }
 #endif

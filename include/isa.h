@@ -64,7 +64,7 @@ bool isa_pma_check_permission(paddr_t addr, int len, int type);
  * @brief Check if the address is in the confidential memory.
  * return true if the address is in the Confidential Memory, otherwise return false.
  */
-bool isa_bmc_check_permission(paddr_t addr, int len, int type, int out_mode);
+bool isa_bmc_check_permission(paddr_t addr);
 #endif
 
 // interrupt

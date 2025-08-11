@@ -64,7 +64,8 @@ word_t paddr_read(paddr_t addr, int len, int type, int trap_type, int mode, vadd
 void paddr_write(paddr_t addr, int len, word_t data, int mode, vaddr_t vaddr);
 bool check_paddr(paddr_t addr, int len, int type, int trap_type, int mode, vaddr_t vaddr);
 #ifdef CONFIG_RV_MBMC
-word_t bitmap_read(paddr_t addr, int type, int mode);
+word_t bitmap_read(paddr_t addr, int type);
+bool check_paddr_mbmc(paddr_t addr, int type, vaddr_t vaddr);
 #endif
 uint8_t *get_pmem();
 
