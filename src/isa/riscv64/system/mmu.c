@@ -336,7 +336,7 @@ paddr_t gpa_stage(paddr_t gpaddr, vaddr_t vaddr, int type, int trap_type, bool i
       }
       word_t pg_mask = ((1ull << SVNAPOTSHFT) - 1);
       pg_base = (pg_base & ~pg_mask) | (gpaddr & pg_mask & ~PGMASK);
-    } else if (! (MUXDEF(CONFIG_RV_MBMC, check_paddr_mbmc(pg_base, type, vaddr), true))){
+    } else if (! (MUXDEF(CONFIG_RV_MBMC, check_paddr_mbmc(pg_base, type, trap_type, MODE_S, vaddr), true))){
       // should never go into this branch.
     } else if (!pte.u) {
       break;
@@ -497,7 +497,7 @@ static paddr_t ptw(vaddr_t vaddr, int type) {
 
 #ifdef CONFIG_RV_MBMC
   if (!virt){
-      check_paddr_mbmc(pg_base, type, vaddr);
+      check_paddr_mbmc(pg_base, type, type, MODE_S, vaddr);
   }
 #endif
 #ifdef CONFIG_RVH
@@ -1080,7 +1080,7 @@ bool pmptable_check_permission(word_t offset, word_t root_table_base, int type, 
 #endif
 
 #ifdef CONFIG_RV_MBMC
-bool isa_bmc_check_permission(paddr_t addr) {
+bool isa_bmc_check_permission(paddr_t addr, int type, int trap_type, int mode, vaddr_t vaddr) {
   if (mbmc->BME == 0) {
     return true;
   }
@@ -1089,7 +1089,7 @@ bool isa_bmc_check_permission(paddr_t addr) {
   }
   word_t bm_base = (mbmc->BMA) << 6;
   word_t ppn = ((addr >> PGSHFT));
-  bool is_bmc = (bitmap_read(bm_base + ppn / 8, MEM_TYPE_BM_READ) >> (ppn % 8)) & 1;
+  bool is_bmc = (bitmap_read(bm_base + ppn / 8, MEM_TYPE_BM_READ, trap_type, mode, vaddr) >> (ppn % 8)) & 1;
   return !is_bmc;
 }
 #endif
