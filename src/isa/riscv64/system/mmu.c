@@ -336,8 +336,9 @@ paddr_t gpa_stage(paddr_t gpaddr, vaddr_t vaddr, int type, int trap_type, bool i
       }
       word_t pg_mask = ((1ull << SVNAPOTSHFT) - 1);
       pg_base = (pg_base & ~pg_mask) | (gpaddr & pg_mask & ~PGMASK);
-    } else if (! (MUXDEF(CONFIG_RV_MBMC, check_paddr_mbmc(pg_base, type, trap_type, MODE_S, vaddr), true))){
-      // should never go into this branch.
+     } else if (! (MUXDEF(CONFIG_RV_MBMC, check_paddr_mbmc(pg_base, type == MEM_TYPE_IFETCH ? MEM_TYPE_IFETCH_READ : type == MEM_TYPE_WRITE ? MEM_TYPE_WRITE_READ : MEM_TYPE_READ, trap_type, MODE_S, vaddr), true))){
+        // should never go into this branch.
+        break;
     } else if (!pte.u) {
       break;
     } else if (
