@@ -88,7 +88,7 @@ void isa_reg_display() {
     #undef FMT_CSR_NAME
     #define FMT_CSR_NAME "%s"
 
-    DISPLAY_CSR("fcsr", cpu.fcsr);
+    DISPLAY_CSR("fcsr", fcsr->val);
     DISPLAY_CSR("fflags", fflags->val);
     DISPLAY_CSR("frm", frm->val);
     printf("\n");
@@ -110,7 +110,9 @@ void isa_reg_display() {
 
   IFDEF(CONFIG_RVH, DISPLAY_CSR("hstatus", cpu.hstatus));
   IFDEF(CONFIG_RV_SMRNMI, DISPLAY_CSR("mnstatus", mnstatus->val));
-  printf("\n");
+  #if defined(CONFIG_RVH) || defined(CONFIG_RV_SMRNMI)
+    printf("\n");
+  #endif
 
   DISPLAY_CSR("mcause", mcause->val);
   DISPLAY_CSR("mepc", mepc->val);

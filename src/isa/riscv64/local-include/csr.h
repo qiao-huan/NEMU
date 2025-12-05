@@ -152,14 +152,14 @@
 /** Supervisor State Enable Registers **/
 #ifdef CONFIG_RV_SMSTATEEN
   #define CSRS_S_STATE0_ENABLE(f) \
-  f(sstateen0 , 0x10C) 
+  f(sstateen0 , 0x10C)
 
   #define CSRS_S_STATEX_ENABLE(f) \
   f(sstateen1 , 0x10D) f(sstateen2 , 0x10E) f(sstateen3 , 0x10F)
 
   #define CSRS_S_STATE_ENABLE(f) \
   CSRS_S_STATE0_ENABLE(f) \
-  CSRS_S_STATEX_ENABLE(f) 
+  CSRS_S_STATEX_ENABLE(f)
 #else
   #define CSRS_S_STATE_ENABLE(f)
 #endif // CONFIG_RV_SMSTATEEN
@@ -219,7 +219,7 @@
 #ifdef CONFIG_RV_SMCSRIND_SUB
   #define CSRS_S_CSRIND_SUB(f) \
     f(sireg2     , 0x152) f(sireg3     , 0x153) \
-    f(sireg4     , 0x155) f(sireg5     , 0x156) f(sireg6     , 0x157) 
+    f(sireg4     , 0x155) f(sireg5     , 0x156) f(sireg6     , 0x157)
 #else
   #define CSRS_S_CSRIND_SUB(f)
 #endif // CONFIG_RV_SMCSRIND_SUB
@@ -276,14 +276,14 @@
   /** Hypervisor State Enable Registers **/
   #ifdef CONFIG_RV_SMSTATEEN
   #define CSRS_H_STATE0_ENABLE(f) \
-  f(hstateen0 , 0x60C) 
+  f(hstateen0 , 0x60C)
 
   #define CSRS_H_STATEX_ENABLE(f) \
   f(hstateen1 , 0x60D) f(hstateen2 , 0x60E) f(hstateen3 , 0x60F)
 
   #define CSRS_H_STATE_ENABLE(f) \
   CSRS_H_STATE0_ENABLE(f) \
-  CSRS_H_STATEX_ENABLE(f) 
+  CSRS_H_STATEX_ENABLE(f)
   #else
     #define CSRS_H_STATE_ENABLE(f)
   #endif // CONFIG_RV_SMSTATEEN
@@ -306,7 +306,7 @@
 
   #if defined(CONFIG_RV_IMSIC) || defined(CONFIG_RV_SMCSRIND)
     #define CSRS_VS_CSRIND(f) \
-      f(vsiselect  , 0x250) f(vsireg     , 0x251) 
+      f(vsiselect  , 0x250) f(vsireg     , 0x251)
   #else
     #define CSRS_VS_CSRIND(f)
   #endif
@@ -315,10 +315,10 @@
   #ifdef CONFIG_RV_SMCSRIND_SUB
     #define CSRS_VS_CSRIND_SUB(f) \
       f(vsireg2     , 0x252) f(vsireg3     , 0x253) \
-      f(vsireg4     , 0x255) f(vsireg5     , 0x256) f(vsireg6     , 0x257) 
+      f(vsireg4     , 0x255) f(vsireg5     , 0x256) f(vsireg6     , 0x257)
   #else
     #define CSRS_VS_CSRIND_SUB(f)
-  #endif 
+  #endif
 
   #ifdef CONFIG_RV_SSTC
     #define CSRS_VS_SSTC(f) \
@@ -422,18 +422,30 @@
     f(pmaaddr8  , 0x7D0) f(pmaaddr9   , 0x7D1) f(pmaaddr10  , 0x7D2) f(pmaaddr11  , 0x7D3) \
     f(pmaaddr12 , 0x7D4) f(pmaaddr13  , 0x7D5) f(pmaaddr14  , 0x7D6) f(pmaaddr15  , 0x7D7)
 #endif // CONFIG_RV_PMA_ENTRY_16
+#ifdef CONFIG_RV_PMA_ENTRY_32
+  #define CSRS_M_MEMORY_ATTRIBUTE(f) \
+    f(pmacfg0   , 0x7C0) f(pmacfg2    , 0x7C2) f(pmacfg4    , 0x7C4) f(pmacfg6    , 0x7C6) \
+    f(pmaaddr0  , 0x7C8) f(pmaaddr1   , 0x7C9) f(pmaaddr2   , 0x7CA) f(pmaaddr3   , 0x7CB) \
+    f(pmaaddr4  , 0x7CC) f(pmaaddr5   , 0x7CD) f(pmaaddr6   , 0x7CE) f(pmaaddr7   , 0x7CF) \
+    f(pmaaddr8  , 0x7D0) f(pmaaddr9   , 0x7D1) f(pmaaddr10  , 0x7D2) f(pmaaddr11  , 0x7D3) \
+    f(pmaaddr12 , 0x7D4) f(pmaaddr13  , 0x7D5) f(pmaaddr14  , 0x7D6) f(pmaaddr15  , 0x7D7) \
+    f(pmaaddr16 , 0x7D8) f(pmaaddr17  , 0x7D9) f(pmaaddr18  , 0x7DA) f(pmaaddr19  , 0x7DB) \
+    f(pmaaddr20 , 0x7DC) f(pmaaddr21  , 0x7DD) f(pmaaddr22  , 0x7DE) f(pmaaddr23  , 0x7DF) \
+    f(pmaaddr24 , 0x7E0) f(pmaaddr25  , 0x7E1) f(pmaaddr26  , 0x7E2) f(pmaaddr27  , 0x7E3) \
+    f(pmaaddr28 , 0x7E4) f(pmaaddr29  , 0x7E5) f(pmaaddr30  , 0x7E6) f(pmaaddr31  , 0x7E7)
+#endif // CONFIG_RV_PMA_ENTRY_32
 
 /** Machine State Enable Registers **/
 #ifdef CONFIG_RV_SMSTATEEN
   #define CSRS_M_STATE0_ENABLE(f) \
-  f(mstateen0 , 0x30C) 
+  f(mstateen0 , 0x30C)
 
   #define CSRS_M_STATEX_ENABLE(f) \
   f(mstateen1 , 0x30D) f(mstateen2 , 0x30E) f(mstateen3 , 0x30F)
 
   #define CSRS_M_STATE_ENABLE(f) \
   CSRS_M_STATE0_ENABLE(f) \
-  CSRS_M_STATEX_ENABLE(f) 
+  CSRS_M_STATEX_ENABLE(f)
 #else
   #define CSRS_M_STATE_ENABLE(f)
 #endif // CONFIG_RV_SMSTATEEN
@@ -533,7 +545,7 @@
 #ifdef CONFIG_RV_SMCSRIND_SUB
   #define CSRS_M_CSRIND_SUB(f) \
     f(mireg2     , 0x352) f(mireg3     , 0x353) \
-    f(mireg4     , 0x355) f(mireg5     , 0x356) f(mireg6     , 0x357) 
+    f(mireg4     , 0x355) f(mireg5     , 0x356) f(mireg6     , 0x357)
 #else
   #define CSRS_M_CSRIND_SUB(f)
 #endif // CONFIG_RV_SMCSRIND_SUB
@@ -868,7 +880,7 @@ CSR_STRUCT_END(mseccfg)
   CSR_STRUCT_END(name)
 
   MAP(CSRS_S_STATEX_ENABLE, CSRS_S_STATEENX_STRUCT)
-  
+
 #ifdef CONFIG_RVH
   CSR_STRUCT_START(hstateen0)
   uint64_t c      : 1; // [0]
@@ -891,7 +903,7 @@ CSR_STRUCT_END(mseccfg)
   uint64_t se  : 1; \
   CSR_STRUCT_END(name)
 
-  MAP(CSRS_H_STATEX_ENABLE, CSRS_H_STATEENX_STRUCT)  
+  MAP(CSRS_H_STATEX_ENABLE, CSRS_H_STATEENX_STRUCT)
 
 #endif
 #endif
@@ -1292,7 +1304,7 @@ CSR_STRUCT_END(stopi)
 CSR_STRUCT_START(siselect)
   uint64_t pad0 : 64;
 CSR_STRUCT_END(siselect)
-  
+
 CSR_STRUCT_START(sireg)
   uint64_t pad0 : 64;
 CSR_STRUCT_END(sireg)
@@ -1802,14 +1814,13 @@ MAP(CSRS, CSRS_DECL)
 #define SATP_MODE_BARE 0
 #define SATP_MODE_Sv39 8
 #define SATP_MODE_Sv48 9
-#define SATP_ASID_LEN 16 // max is 16
 #define SATP_PADDR_LEN (CONFIG_PADDRBITS-12) // max is 44
 #define SATP_ASID_MAX_LEN 16
 #define SATP_PADDR_MAX_LEN 44
 
 #define SATP_MODE39_MASK (8UL << (SATP_ASID_MAX_LEN + SATP_PADDR_MAX_LEN))
 #define SATP_MODE48_MASK (9UL << (SATP_ASID_MAX_LEN + SATP_PADDR_MAX_LEN))
-#define SATP_ASID_MASK (((1L << SATP_ASID_LEN)-1) << SATP_PADDR_MAX_LEN)
+#define SATP_ASID_MASK (((1L << CONFIG_RV_ASID_LEN)-1) << SATP_PADDR_MAX_LEN)
 #define SATP_PADDR_MASK ((1L << SATP_PADDR_LEN)-1)
 
 #ifdef CONFIG_RV_SV48
@@ -1824,13 +1835,12 @@ MAP(CSRS, CSRS_DECL)
 #define HGATP_MODE_BARE   0
 #define HGATP_MODE_Sv39x4 8
 #define HGATP_MODE_Sv48x4 9
-#define HGATP_VMID_LEN 14 // max is 14
 #define HGATP_PADDR_LEN 44 // max is 44
-#define HGATP_VMID_MAX_LEN 16
+#define HGATP_VMID_MAX_LEN 14
 #define HGATP_PADDR_MAX_LEN 44
 
 #define HGATP_MODE_MASK (8UL << (HGATP_VMID_MAX_LEN + HGATP_PADDR_MAX_LEN))
-#define HGATP_VMID_MASK (((1L << HGATP_VMID_LEN)-1) << HGATP_PADDR_MAX_LEN)
+#define HGATP_VMID_MASK (((1L << CONFIG_RV_VMID_LEN)-1) << HGATP_PADDR_MAX_LEN)
 #define HGATP_PADDR_MASK ((1L << HGATP_PADDR_MAX_LEN)-1)
 
 #define HGATP_MASK (HGATP_MODE_MASK | HGATP_VMID_MASK | HGATP_PADDR_MASK)

@@ -90,6 +90,7 @@ void init_trigger() {
   }
   tselect->val = 0;
   tinfo->val = 0
+    IFDEF(CONFIG_TDATA1_MCONTROL, | (1 << TRIG_TYPE_MCONTROL))
     IFDEF(CONFIG_TDATA1_ICOUNT, | (1 << TRIG_TYPE_ICOUNT))
     IFDEF(CONFIG_TDATA1_ITRIGGER, | (1 << TRIG_TYPE_ITRIG))
     IFDEF(CONFIG_TDATA1_ETRIGGER, | (1 << TRIG_TYPE_ETRIG))
@@ -1031,37 +1032,6 @@ static inline void set_tvec(word_t* dest, word_t src) {
 }
 
 #ifdef CONFIG_RVH
-static inline word_t vmode_get_sie() {
-  word_t tmp = 0;
-#ifdef CONFIG_RV_AIA
-  word_t originIE = mie->val;
-
-  tmp = (originIE & ~0x1fff) | ((originIE & VSI_MASK) >> 1);
-  tmp |= vmode_get_ie(13, 63);
-#else
-  tmp = (mie->val & VSI_MASK) >> 1;
-  IFDEF(CONFIG_RV_SSCOFPMF, tmp |= mie->val & mideleg->val & get_hideleg() & MIP_LCOFIP);
-#endif // CONFIG_RV_AIA
-
-  return tmp;
-}
-#endif // CONFIG_RVH
-
-#ifdef CONFIG_RVH
-static inline void vmode_set_sie(word_t src) {
-  mie->val = mask_bitset(mie->val, VSI_MASK, src << 1);
-#ifdef CONFIG_RV_AIA
-  mie->val = mask_bitset(mie->val, MIP_LCOFIP & mideleg->val & get_hideleg(), src);
-  sie->val = mask_bitset(sie->val, MIP_LCOFIP & (~mideleg->val & get_hideleg() & mvien->val), src);
-  vsie->val = mask_bitset(vsie->val, MIP_LCOFIP & (~get_hideleg() & hvien->val), src);
-  vmode_set_ie(src, 14, 63);
-#else
-  IFDEF(CONFIG_RV_SSCOFPMF, mie->val = mask_bitset(mie->val, MIP_LCOFIP & mideleg->val & get_hideleg(), src));
-#endif // CONFIG_RV_AIA
-}
-#endif // CONFIG_RVH
-
-#ifdef CONFIG_RVH
 static inline word_t get_vsie() {
   word_t tmp = 0;
 #ifdef CONFIG_RV_AIA
@@ -1231,38 +1201,6 @@ static inline void set_mvip(word_t src) {
 #endif // CONFIG_RV_AIA
 
 #ifdef CONFIG_RVH
-static inline word_t vmode_get_sip() {
-  word_t tmp = 0;
-#ifdef CONFIG_RV_AIA
-  word_t originIP = get_mip();
-
-  tmp = (originIP & ~0x1fff) | ((originIP & VSI_MASK) >> 1);
-  tmp |= vmode_get_ip(13, 63);
-#else
-  tmp = (get_mip() & VSI_MASK) >> 1;
-  IFDEF(CONFIG_RV_SSCOFPMF, tmp |= get_mip() & mideleg->val & get_hideleg() & MIP_LCOFIP);
-#endif // CONFIG_RV_AIA
-
-  return tmp;
-}
-#endif // CONFIG_RVH
-
-#ifdef CONFIG_RVH
-static inline void vmode_set_sip(word_t src) {
-  hvip->val = mask_bitset(hvip->val, MIP_VSSIP, src << 1);
-
-#ifdef CONFIG_RV_AIA
-  mip->val = mask_bitset(get_mip(), MIP_LCOFIP & mideleg->val & get_hideleg(), src);
-  mvip->val = mask_bitset(mvip->val, MIP_LCOFIP & (~mideleg->val & get_hideleg() & mvien->val), src);
-  hvip->val = mask_bitset(hvip->val, MIP_LCOFIP & (~get_hideleg() & hvien->val), src);
-  vmode_set_ip(src, 14, 63);
-#else
-  IFDEF(CONFIG_RV_SSCOFPMF, mip->val = mask_bitset(get_mip(), MIP_LCOFIP & mideleg->val & get_hideleg(), src));
-#endif // CONFIG_RV_AIA
-}
-#endif // CONFIG_RVH
-
-#ifdef CONFIG_RVH
 static inline word_t get_vsip() {
   word_t tmp = 0;
 #ifdef CONFIG_RV_AIA
@@ -1304,7 +1242,28 @@ static inline word_t get_hip() {
   return tmp;
 }
 inline word_t get_hideleg() {
-  return (hideleg->val & HIDELEG_MASK & mideleg->val) | MUXDEF(CONFIG_RV_AIA, (hideleg->val & mvien->val & LCI), 0);
+  return (cpu.hideleg_reg & HIDELEG_MASK & mideleg->val) | MUXDEF(CONFIG_RV_AIA, (cpu.hideleg_reg & mvien->val & LCI), 0);
+}
+static inline void set_hideleg(word_t src) {
+  // hideleg->val is to diff RTL and NEMU and hideleg_reg is register value
+  // The rdata of the hideleg register is
+  //    reg & mideleg & HIDELEG_MASK |
+  //    reg & mvien & LCI
+  // in XiangShan.
+  //
+  // A situation may arise at this point. First, write 1 to bit 13 of hideleg.
+  // At this point, hideleg.reg.LCOFIP = 1 in the RTL.
+  // Since bit 13 of mideleg or mvien is 0, the RTL's hideleg.rdata is 0.
+  // The NEMU's get_hideleg is also 0, and a diff is performed with the RTL.
+  // Then, write 1 to bit 13 of mideleg.
+  // The RTL's hideleg.rdata becomes 1, but the NEMU's hideleg->val is the result of csr_writeback and csr_prepare operations,
+  // which is the value of get_hideleg, which is 0.
+  // This causes an error in the RTL-NEMU diff.
+
+  // Therefore, in order to solve the above problem,
+  // a value of the hideleg register is temporarily stored in NEMU.
+  hideleg->val = mask_bitset(hideleg->val, HIDELEG_MASK, src);
+  cpu.hideleg_reg = mask_bitset(cpu.hideleg_reg, HIDELEG_MASK, src);
 }
 #endif // CONFIG_RVH
 
@@ -1664,7 +1623,7 @@ static word_t csr_read(uint32_t csrid) {
 #endif // CONFIG_RV_SMSTATEEN
 
     case CSR_SIE:
-      IFDEF(CONFIG_RVH, if (cpu.v) return vmode_get_sie());
+      IFDEF(CONFIG_RVH, if (cpu.v) return get_vsie());
       return non_vmode_get_sie();
     case CSR_STVEC:
       IFDEF(CONFIG_RVH, if (cpu.v) return vstvec->val);
@@ -1682,7 +1641,7 @@ static word_t csr_read(uint32_t csrid) {
       IFDEF(CONFIG_RVH, if (cpu.v) return vstval->val);
       return stval->val;
     case CSR_SIP:
-      IFDEF(CONFIG_RVH, if (cpu.v) return vmode_get_sip());
+      IFDEF(CONFIG_RVH, if (cpu.v) return get_vsip());
       IFNDEF(CONFIG_RVH, difftest_skip_ref());
       return non_vmode_get_sip();
 #ifdef CONFIG_RV_SSTC
@@ -1813,12 +1772,8 @@ static word_t csr_read(uint32_t csrid) {
       }
 
       uint8_t cfg = pmpcfg_from_index(idx);
-#ifdef CONFIG_SHARE
-      if(dynamic_config.debug_difftest) {
-        fprintf(stderr, "[NEMU] pmp addr read %d : 0x%016lx\n", idx,
+        ref_log_cpu("pmp addr read %d : 0x%016lx", idx,
           (cfg & PMP_A) >= PMP_NAPOT ? *src | (~pmp_tor_mask() >> 1) : *src & pmp_tor_mask());
-      }
-#endif // CONFIG_SHARE
       if ((cfg & PMP_A) >= PMP_NAPOT)
         return *src | (~pmp_tor_mask() >> 1);
       else
@@ -1840,12 +1795,8 @@ static word_t csr_read(uint32_t csrid) {
       }
 
       uint8_t cfg = pmacfg_from_index(idx);
-#ifdef CONFIG_SHARE
-      if (dynamic_config.debug_difftest) {
-        fprintf(stderr, "[NEMU] pma addr read %d : 0x%016lx\n", idx,
+      ref_log_cpu("pma addr read %d : 0x%016lx", idx,
           (cfg & PMA_A) >= PMA_NAPOT ? *src | (~pma_tor_mask() >> 1) : *src & pma_tor_mask());
-      }
-#endif // CONFIG_SHARE
       if ((cfg & PMA_A) >= PMA_NAPOT)
         return *src | (~pma_tor_mask() >> 1);
       else
@@ -2012,7 +1963,7 @@ static void csr_write(uint32_t csrid, word_t src) {
 #endif // CONFIG_RV_SMSTATEEN
 
     case CSR_SIE:
-      IFDEF(CONFIG_RVH, if (cpu.v) {vmode_set_sie(src); break;});
+      IFDEF(CONFIG_RVH, if (cpu.v) {set_vsie(src); break;});
       non_vmode_set_sie(src);
       break;
 
@@ -2042,7 +1993,7 @@ static void csr_write(uint32_t csrid, word_t src) {
       break;
 
     case CSR_SIP:
-      IFDEF(CONFIG_RVH, if (cpu.v) {vmode_set_sip(src); break;});
+      IFDEF(CONFIG_RVH, if (cpu.v) {set_vsip(src); break;});
       non_vmode_set_sip(src);
       break;
 
@@ -2157,7 +2108,7 @@ static void csr_write(uint32_t csrid, word_t src) {
       break;
     }
     case CSR_HEDELEG: hedeleg->val = mask_bitset(hedeleg->val, HEDELEG_MASK, src); break;
-    case CSR_HIDELEG: hideleg->val = mask_bitset(get_hideleg(), HIDELEG_MASK, src); break;
+    case CSR_HIDELEG: set_hideleg(src); break;
     case CSR_HSTATUS:
       hstatus->val = mask_bitset(hstatus->val, HSTATUS_WMASK & (~HSTATUS_WMASK_HUPMM), src);
       if (((hstatus_t*)&src)->hupmm != 0b01) { // 0b01 is reserved
@@ -2385,12 +2336,8 @@ static void csr_write(uint32_t csrid, word_t src) {
           cfg_data |= (oldCfg << (i*8));
         }
       }
-    #ifdef CONFIG_SHARE
-      if(dynamic_config.debug_difftest) {
-        int idx = dest - &csr_array[CSR_PMPCFG_BASE];
-        Logtr("[NEMU] write pmpcfg%d to %016lx\n", idx, cfg_data);
-      }
-    #endif // CONFIG_SHARE
+      int idx = dest - &csr_array[CSR_PMPCFG_BASE];
+      ref_log_cpu("write pmpcfg%d to %016lx", idx, cfg_data);
 
       *dest = cfg_data;
 
@@ -2416,11 +2363,7 @@ static void csr_write(uint32_t csrid, word_t src) {
       if (idx < CONFIG_RV_PMP_ACTIVE_NUM && !locked && !(next_locked && next_tor)) {
         *dest = src & (((word_t)1 << (CONFIG_PADDRBITS - PMP_SHIFT)) - 1);
       }
-#ifdef CONFIG_SHARE
-      if(dynamic_config.debug_difftest) {
-        fprintf(stderr, "[NEMU] write pmp addr%d to %016lx\n",idx, *dest);
-      }
-#endif // CONFIG_SHARE
+      ref_log_cpu("write pmp addr%d to %016lx",idx, *dest);
       mmu_tlb_flush(0);
       break;
     }
@@ -2450,12 +2393,8 @@ static void csr_write(uint32_t csrid, word_t src) {
           cfg_data |= (oldCfg << (i*8));
         }
       }
-#ifdef CONFIG_SHARE
-      if (dynamic_config.debug_difftest) {
-        int idx = dest - &csr_array[CSR_PMACFG_BASE];
-        Logtr("[NEMU] write pmacfg%d to %016lx\n", idx, cfg_data);
-      }
-#endif // CONFIG_SHARE
+      int idx = dest - &csr_array[CSR_PMACFG_BASE];
+      ref_log_cpu("write pmacfg%d to %016lx", idx, cfg_data);
 
       *dest = cfg_data;
 
@@ -2480,11 +2419,7 @@ static void csr_write(uint32_t csrid, word_t src) {
       if (idx < CONFIG_RV_PMA_ACTIVE_NUM && !locked && !(next_locked && next_tor)) {
         *dest = src & (((word_t)1 << (CONFIG_PADDRBITS - PMA_SHIFT)) - 1);
       }
-#ifdef CONFIG_SHARE
-      if (dynamic_config.debug_difftest) {
-        fprintf(stderr, "[NEMU] write pma addr%d to %016lx\n", idx, *dest);
-      }
-#endif // CONFIG_SHARE
+      ref_log_cpu("write pma addr%d to %016lx", idx, *dest);
       mmu_tlb_flush(0);
       break;
     }
@@ -2573,6 +2508,7 @@ static void csr_write(uint32_t csrid, word_t src) {
 
 #ifdef CONFIG_RV_MBMC
     case CUSTOM_CSR_MBMC:
+    {
       bool BME_dest = mbmc->val & MBMC_BME;
       uint64_t mbmc_mask;
       if (BME_dest == 1) {
@@ -2582,6 +2518,7 @@ static void csr_write(uint32_t csrid, word_t src) {
       }
       mbmc->val = mask_bitset(mbmc->val, mbmc_mask, src);
       break;
+    }
 #endif
 
 #ifdef CONFIG_RV_IMSIC

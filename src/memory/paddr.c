@@ -27,7 +27,6 @@
 #include "../local-include/intr.h"
 
 unsigned long MEMORY_SIZE = CONFIG_MSIZE;
-unsigned int PMEM_HARTID = 0;
 
 extern Decode *prev_s;
 
@@ -36,12 +35,6 @@ extern uint64_t vec_read_golden_mem_addr;
 extern uint64_t vec_read_golden_mem_data;
 bool need_read_golden_mem = false;
 #endif // defined(CONFIG_MULTICORE_DIFF) && defined(CONFIG_RVV)
-
-#ifdef CONFIG_LIGHTQS
-#define PMEMBASE 0x1100000000ul
-#else
-#define PMEMBASE 0x100000000ul
-#endif // CONFIG_LIGHTQS
 
 #ifdef CONFIG_USE_MMAP
 #include <sys/mman.h>
@@ -175,18 +168,17 @@ void allocate_memory_with_mmap()
   #ifdef CONFIG_USE_SPARSEMM
   sparse_mm = sparse_mem_new(4, 1024); //4kB
   #else
-  // Note: we are using MAP_FIXED here, in the SHARED mode, even if
-  // init_mem may be called multiple times, the memory space will be
-  // allocated only once at the first time called.
-  // See https://man7.org/linux/man-pages/man2/mmap.2.html for details.
-  void *pmem_base = (void *)(PMEMBASE + PMEM_HARTID * MEMORY_SIZE);
-  void *ret = mmap(pmem_base, MEMORY_SIZE, PROT_READ | PROT_WRITE,
-      MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED | MAP_NORESERVE, -1, 0);
-  if (ret != pmem_base) {
-    perror("mmap");
+  // When pmem is not NULL, assume it has already been allocated.
+  // This is useful since init_mem may be called multiple times.
+  // The memory space will be allocated only once at the first time called.
+  if (pmem) {}
+
+  pmem = mmap(NULL, MEMORY_SIZE, PROT_READ | PROT_WRITE,
+      MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1, 0);
+  if (!pmem) {
+    perror("mmap allocation failed");
     assert(0);
   }
-  pmem = (uint8_t*)ret;
   #endif
 #endif // CONFIG_USE_MMAP
 }
@@ -300,10 +292,8 @@ word_t paddr_read(paddr_t addr, int len, int type, int trap_type, int mode, vadd
 #else
   if (likely(in_pmem(addr))) {
     uint64_t rdata = pmem_read(addr, len);
-    if (dynamic_config.debug_difftest) {
-      fprintf(stderr, "[NEMU] paddr read addr:" FMT_PADDR ", data: %016lx, len:%d, type:%d, mode:%d\n",
+    ref_log_cpu("paddr read addr:" FMT_PADDR ", data: %016lx, len:%d, type:%d, mode:%d",
         addr, rdata, len, type, mode);
-    }
     return rdata;
   }
   else {
@@ -453,10 +443,8 @@ void paddr_write(paddr_t addr, int len, word_t data, int mode, vaddr_t vaddr) {
 #ifdef CONFIG_STORE_LOG
     pmem_record_store(addr);
 #endif // CONFIG_STORE_LOG
-    if(dynamic_config.debug_difftest) {
-      fprintf(stderr, "[NEMU] paddr write addr:" FMT_PADDR ", data:%016lx, len:%d, mode:%d\n",
+    ref_log_cpu("paddr write addr:" FMT_PADDR ", data:%016lx, len:%d, mode:%d",
         addr, data, len, mode);
-    }
     return pmem_write(addr, len, data, cross_page_store);
   } else {
     if (likely(is_in_mmio(addr))) {
