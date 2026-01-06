@@ -230,6 +230,23 @@ void set_pmem(bool pass_pmem_from_dut, uint8_t *_pmem)
 }
 #endif
 
+#ifdef CONFIG_RV_MBMC
+bool check_paddr_mbmc(paddr_t addr, int type, int trap_type, int mode, vaddr_t vaddr) {
+  // , int trap_type, int mode, vaddr_t vaddr
+  if (!isa_bmc_check_permission(addr, type, trap_type, mode, vaddr)){
+    if (type == MEM_TYPE_WRITE) {
+      Log("isa mbmc check write failed, vaddr = %#lx", vaddr);
+      raise_access_fault(EX_SAF, vaddr);
+    } else {
+      Log("isa mbmc check failed, vaddr = %#lx", vaddr);
+      raise_read_access_fault(type, vaddr);
+    }
+    return false;
+  }
+  return true;
+}
+#endif
+
 /* Memory accessing interfaces */
 
 bool check_paddr(paddr_t addr, int len, int type, int trap_type, int mode, vaddr_t vaddr) {
@@ -254,7 +271,7 @@ bool check_paddr(paddr_t addr, int len, int type, int trap_type, int mode, vaddr
     return false;
   }
   #ifdef CONFIG_RV_MBMC
-  if (!isa_bmc_check_permission(addr, len, type, mode)){
+  if (!isa_bmc_check_permission(addr, len, type, mode, vaddr)){
     if (type == MEM_TYPE_WRITE) {
       raise_access_fault(EX_SAF, vaddr);
     } else {
@@ -340,7 +357,10 @@ word_t paddr_read(paddr_t addr, int len, int type, int trap_type, int mode, vadd
 }
 
 #ifdef CONFIG_RV_MBMC
-word_t bitmap_read(paddr_t addr, int type, int mode) {
+word_t bitmap_read(paddr_t addr, int type, int trap_type, int mode, vaddr_t vaddr) {
+  if(!check_paddr(addr, 1, type, trap_type, mode, vaddr)){
+    return 0;
+  }
   return pmem_read(addr, 1);
 }
 #endif

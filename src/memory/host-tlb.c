@@ -76,7 +76,7 @@ static word_t hosttlb_read_slowpath(struct Decode *s, vaddr_t vaddr, int len, in
   paddr_t paddr = va2pa(s, vaddr, len, type);
   word_t data = paddr_read(paddr, len, type, type, cpu.mode, vaddr);
   if (
-    MUXDEF(CONFIG_RV_MBMC, isa_bmc_check_permission(paddr, len, 0, 0), true) &&
+    MUXDEF(CONFIG_RV_MBMC, isa_bmc_check_permission(paddr, type, type, cpu.mode, vaddr), true) &&
     likely(in_pmem(paddr))
   ) {
     HostTLBEntry *e = type == MEM_TYPE_IFETCH ?
@@ -97,7 +97,7 @@ static void hosttlb_write_slowpath(struct Decode *s, vaddr_t vaddr, int len, wor
   paddr_t paddr = va2pa(s, vaddr, len, MEM_TYPE_WRITE);
   paddr_write(paddr, len, data, cpu.mode, vaddr);
   if (
-    MUXDEF(CONFIG_RV_MBMC, isa_bmc_check_permission(paddr, len, 0, 0), true) &&
+    MUXDEF(CONFIG_RV_MBMC, isa_bmc_check_permission(paddr, MEM_TYPE_WRITE, MEM_TYPE_WRITE, cpu.mode, vaddr), true) &&
     likely(in_pmem(paddr))
   ) {
     HostTLBEntry *e = &hostwtlb[hosttlb_idx(vaddr)];
@@ -115,6 +115,7 @@ word_t hosttlb_read(struct Decode *s, vaddr_t vaddr, int len, int type) {
 #ifdef CONFIG_RVH
   extern bool has_two_stage_translation();
   if(has_two_stage_translation()){
+    printf("has 2 stage\n");
     paddr_t paddr = va2pa(s, vaddr, len, type);
     return paddr_read(paddr, len, type, type, cpu.mode, vaddr);
   }

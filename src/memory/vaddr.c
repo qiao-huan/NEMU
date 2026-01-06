@@ -128,6 +128,7 @@ static void vaddr_write_cross_page(vaddr_t addr, int len, word_t data, bool need
 
 __attribute__((noinline))
 static word_t vaddr_mmu_read(struct Decode *s, vaddr_t addr, int len, int type) {
+  printf("调用 vaddr_mmu_read\n");
   vaddr_t vaddr = addr;
   paddr_t pg_base = isa_mmu_translate(addr, len, type);
   int ret = pg_base & PAGE_MASK;
