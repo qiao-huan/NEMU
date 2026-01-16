@@ -1207,7 +1207,8 @@ CSR_STRUCT_START(mbmc)
   uint64_t CMODE:   1;
   uint64_t BCLEAR:  1;
   uint64_t BME  :   1;
-  uint64_t RSV  :   3;
+  uint64_t KEYIDEN  :   1;
+  uint64_t RSV  :   2;
   uint64_t BMA  :  58;
 CSR_STRUCT_END(mbmc)
 #endif

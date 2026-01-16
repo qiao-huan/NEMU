@@ -1093,6 +1093,12 @@ bool isa_bmc_check_permission(paddr_t addr, int type, int trap_type, int mode, v
   if (mbmc->CMODE == 1) {
     return true;
   }
+  if (mbmc->KEYIDEN == 1) {
+    if (addr & (1ULL << 47) != 0) {
+      Log("Accessing memory using a non-zero KeyID in insecure world, intercepted by Bitmap.\n");
+      return false;
+    }
+  }
   word_t bm_base = (mbmc->BMA) << 6;
   word_t ppn = ((addr >> PGSHFT));
   bool is_bmc = (bitmap_read(bm_base + ppn / 8, MEM_TYPE_BM_READ, trap_type, mode, vaddr) >> (ppn % 8)) & 1;
@@ -1101,6 +1107,18 @@ bool isa_bmc_check_permission(paddr_t addr, int type, int trap_type, int mode, v
 #endif
 
 bool isa_pmp_check_permission(paddr_t addr, int len, int type, int out_mode) {
+#ifdef CONFIG_RV_MBMC
+  if (mbmc->KEYIDEN == 1) {
+    // 进行KeyID检查
+    if(mbmc->CMODE == 0) {
+      // 非安全世界，只允许KeyID为0的读写
+      if (addr & (1ULL << 47) != 0) {
+        Log("Accessing memory using a non-zero KeyID in insecure world, intercepted by PMP.\n");
+        return false;
+      }
+    }
+  }
+#endif
   bool ifetch = (type == MEM_TYPE_IFETCH);
   __attribute__((unused)) uint32_t mode;
   mode = (out_mode == MODE_M) ? (get_mprv() && !ifetch ? mstatus->mpp : cpu.mode) : out_mode;
@@ -1240,6 +1258,18 @@ bool isa_pmp_check_permission(paddr_t addr, int len, int type, int out_mode) {
 }
 
 bool isa_pma_check_permission(paddr_t addr, int len, int type) {
+#ifdef CONFIG_RV_MBMC
+  if (mbmc->KEYIDEN == 1) {
+    // 进行KeyID检查
+    if(mbmc->CMODE == 0) {
+      // 非安全世界，只允许KeyID为0的读写
+      if (addr & (1ULL << 47) != 0) {
+        Log("Accessing memory using a non-zero KeyID in insecure world, intercepted by PMA.\n");
+        return false;
+      }
+    }
+  }
+#endif
 #ifdef CONFIG_RV_PMA_CHECK
   if (CONFIG_RV_PMA_ACTIVE_NUM == 0) {
     return true;
